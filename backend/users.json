@@ -1,0 +1,26 @@
+[
+  {
+    "username": "ps956984mishr@gmail.com",
+    "password": "$2b$10$6kE8attF8Tq/aids8kuF3.9e.VEvMYEU8Fo/Flcz7R6eTbS35xvZK",
+    "twoFactorEnabled": false,
+    "twoFactorSecret": null,
+    "createdAt": "2026-04-04T00:00:00.000Z",
+    "role": "user"
+  },
+  {
+    "username": "testuser",
+    "password": "$2b$12$P5I5X4P.SCrXNBqRb9M4qOLJ1OXHqXeXSjiJzVtFH8uiG7dSHJeuC",
+    "twoFactorEnabled": false,
+    "twoFactorSecret": "GYYHALTFPJKECTCVN4RW2QSLJQ5U4RDC",
+    "createdAt": "2026-04-04T13:51:57.794Z",
+    "role": "user"
+  },
+  {
+    "username": "reviewuser",
+    "password": "$2b$12$UPvDiBJaCeCxCxbAPJxUMuExOueJa/CHKIg5H4E55kO7d4XP5vDKC",
+    "twoFactorEnabled": false,
+    "twoFactorSecret": null,
+    "createdAt": "2026-04-05T06:02:54.063Z",
+    "role": "user"
+  }
+]

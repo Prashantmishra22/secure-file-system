@@ -1,0 +1,3 @@
+node_modules/
+backend/jwt-secret.txt
+backend/uploads/

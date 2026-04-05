@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1775369013635,
+    "timestamp": "2026-04-05T06:03:33.635Z",
+    "username": "testuser",
+    "type": "BRUTE_FORCE",
+    "detail": "Failed login attempt",
+    "ip": "::1"
+  }
+]
