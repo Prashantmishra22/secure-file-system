@@ -821,6 +821,7 @@
         // Full login success
         sessionStorage.setItem('token', data.token);
         sessionStorage.setItem('user', data.username);
+        sessionStorage.setItem('role', data.role || 'user');
         window.location = 'dashboard.html';
 
       } catch {
@@ -893,6 +894,7 @@
 
         sessionStorage.setItem('token', data.token);
         sessionStorage.setItem('user', data.username);
+        sessionStorage.setItem('role', data.role || 'user');
         window.location = 'dashboard.html';
 
       } catch {

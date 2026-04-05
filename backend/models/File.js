@@ -17,10 +17,14 @@ const fileSchema = new mongoose.Schema({
   mimetype:      { type: String, default: 'application/octet-stream' },
   uploadedAt:    { type: String, default: () => new Date().toISOString() },
   sharedWith:    { type: [String], default: [] },
-  accessLog:     { type: [accessLogEntry], default: [] }
+  accessLog:     { type: [accessLogEntry], default: [] },
+  version:       { type: Number, default: 1 },
+  isLatest:      { type: Boolean, default: true }
 });
 
 // Index for querying shared files
 fileSchema.index({ sharedWith: 1 });
+// Index for version queries
+fileSchema.index({ owner: 1, name: 1, version: -1 });
 
 module.exports = mongoose.model('File', fileSchema);

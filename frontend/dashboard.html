@@ -5,215 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Secure File System</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --glass: rgba(255,255,255,0.04);
-    --glass-border: rgba(0,255,140,0.15);
-    --glow: rgba(0,255,140,0.12);
-    --accent: #00ff8c;
-    --accent2: #00cfff;
-    --danger: #ff4d6a;
-    --warn: #ffc400;
-    --bg: #050a0e;
-    --surface: rgba(255,255,255,0.03);
-    --text: #e0ffe8;
-    --muted: rgba(200,255,220,0.45);
-  }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 70% 50% at 15% 30%,rgba(0,255,140,0.05) 0%,transparent 60%),radial-gradient(ellipse 50% 70% at 85% 80%,rgba(0,207,255,0.04) 0%,transparent 60%),var(--bg)}
-  .layout{position:relative;z-index:10;display:flex;min-height:100vh}
-
-  /* SIDEBAR */
-  .sidebar{width:240px;flex-shrink:0;background:rgba(0,0,0,0.5);border-right:1px solid var(--glass-border);backdrop-filter:blur(20px);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0}
-  .sidebar-logo{padding:28px 24px 24px;border-bottom:1px solid var(--glass-border);font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:3px;color:var(--accent);display:flex;align-items:center;gap:10px}
-  .sidebar-logo::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-  .sidebar-user{padding:20px 24px;border-bottom:1px solid var(--glass-border)}
-  .sidebar-user .label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-  .sidebar-user .name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .storage-box{padding:20px 24px;border-bottom:1px solid var(--glass-border)}
-  .storage-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
-  .storage-label span{color:var(--accent);font-size:11px}
-  .storage-bar{height:5px;background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden}
-  .storage-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 0 8px var(--accent);transition:width 0.6s}
-  .storage-info{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px}
-  .sidebar-nav{padding:16px 12px;flex:1}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all 0.15s;margin-bottom:4px;user-select:none}
-  .nav-item:hover,.nav-item.active{background:rgba(0,255,140,0.08);color:var(--accent)}
-  .nav-item svg{width:16px;height:16px;flex-shrink:0}
-  .sidebar-bottom{padding:16px 12px;border-top:1px solid var(--glass-border)}
-  .btn-logout{width:100%;padding:11px;background:transparent;border:1px solid rgba(255,77,106,0.3);border-radius:10px;color:var(--danger);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s}
-  .btn-logout:hover{background:rgba(255,77,106,0.1);border-color:var(--danger)}
-
-  /* CONTENT */
-  .content{margin-left:240px;flex:1;padding:40px 48px;min-height:100vh}
-  .page{display:none}.page.active{display:block}
-  .page-title{font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
-  .page-title span{color:var(--accent)}
-  .page-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:32px}
-
-  /* STATS */
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
-  .stat-card{padding:20px 22px;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;backdrop-filter:blur(20px);transition:border-color 0.2s}
-  .stat-card:hover{border-color:rgba(0,255,140,0.35)}
-  .stat-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-  .stat-val{font-size:26px;font-weight:800}
-  .stat-val span{color:var(--accent);font-size:14px;font-weight:400;margin-left:4px}
-
-  /* UPLOAD ZONE */
-  .upload-zone{background:var(--glass);border:1px dashed rgba(0,255,140,0.3);border-radius:16px;padding:28px;margin-bottom:28px;display:flex;align-items:center;gap:20px;transition:all 0.2s;cursor:pointer}
-  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(0,255,140,0.04);box-shadow:0 0 20px var(--glow)}
-  .upload-icon{width:48px;height:48px;flex-shrink:0;background:rgba(0,255,140,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center}
-  .upload-icon svg{width:24px;height:24px;color:var(--accent)}
-  .upload-info{flex:1}
-  .upload-info strong{font-size:15px;font-weight:700}
-  .upload-info p{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px}
-  .upload-controls{display:flex;align-items:center;gap:12px}
-  input[type="file"]{display:none}
-  .file-chosen{font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .upload-progress{margin-top:12px;display:none}
-  .upload-progress.show{display:block}
-  .progress-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px;animation:progAnim 1.5s ease-in-out infinite}
-  @keyframes progAnim{0%{width:0%}50%{width:70%}100%{width:100%}}
-
-  /* TOOLBAR */
-  .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-  .search-wrap{flex:1;position:relative}
-  .search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
-  .search-wrap input{width:100%;padding:11px 14px 11px 40px;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;outline:none;transition:border-color 0.2s}
-  .search-wrap input:focus{border-color:var(--accent)}
-  .search-wrap input::placeholder{color:rgba(200,255,220,0.2)}
-  .filter-select{padding:11px 14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;outline:none;cursor:pointer}
-  .filter-select option{background:#0a1410}
-
-  /* FILE LIST */
-  .files-header{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding:0 4px;display:flex;justify-content:space-between}
-  .file-list{display:flex;flex-direction:column;gap:8px}
-  .file-card{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;backdrop-filter:blur(10px);transition:all 0.2s;animation:slideIn 0.3s ease both}
-  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-  .file-card:hover{border-color:rgba(0,255,140,0.3);background:rgba(0,255,140,0.03)}
-  .file-icon{width:38px;height:38px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase}
-  .type-pdf{background:rgba(255,100,80,0.15);color:#ff6450}
-  .type-img{background:rgba(0,207,255,0.15);color:var(--accent2)}
-  .type-doc{background:rgba(100,120,255,0.15);color:#8899ff}
-  .type-zip{background:rgba(255,200,0,0.15);color:#ffc800}
-  .type-file{background:rgba(0,255,140,0.1);color:var(--accent)}
-  .file-meta{flex:1;min-width:0}
-  .file-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .file-tags{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
-  .file-tag{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:2px 8px;background:rgba(255,255,255,0.05);border-radius:20px}
-  .file-tag.shared{color:var(--accent2);background:rgba(0,207,255,0.08)}
-  .file-actions{display:flex;gap:6px;flex-shrink:0}
-  .icon-btn{width:34px;height:34px;border-radius:8px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s}
-  .icon-btn svg{width:15px;height:15px}
-  .btn-download{background:rgba(0,255,140,0.1);color:var(--accent)}
-  .btn-download:hover{background:rgba(0,255,140,0.2);transform:translateY(-1px)}
-  .btn-share-f{background:rgba(0,207,255,0.1);color:var(--accent2)}
-  .btn-share-f:hover{background:rgba(0,207,255,0.2);transform:translateY(-1px)}
-  .btn-info{background:rgba(255,200,0,0.1);color:var(--warn)}
-  .btn-info:hover{background:rgba(255,200,0,0.2);transform:translateY(-1px)}
-  .btn-delete{background:rgba(255,77,106,0.1);color:var(--danger)}
-  .btn-delete:hover{background:rgba(255,77,106,0.2);transform:translateY(-1px)}
-
-  /* EMPTY STATE */
-  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);display:none}
-  .empty-state.show{display:block}
-  .empty-state p{font-size:14px;margin-top:12px}
-
-  /* SECTION LABEL */
-  .section-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);padding:10px 0 14px;border-top:1px solid var(--glass-border);margin-top:24px}
-
-  /* SECURITY LOG */
-  .threat-list{display:flex;flex-direction:column;gap:10px}
-  .threat-card{padding:16px 20px;background:var(--glass);border:1px solid rgba(255,77,106,0.2);border-radius:12px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start}
-  .threat-badge{padding:4px 10px;border-radius:6px;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;white-space:nowrap}
-  .badge-MALWARE{background:rgba(255,77,106,0.15);color:var(--danger)}
-  .badge-BUFFER_OVERFLOW{background:rgba(255,200,0,0.15);color:var(--warn)}
-  .badge-BRUTE_FORCE{background:rgba(255,100,50,0.15);color:#ff6432}
-  .badge-UNAUTHORIZED{background:rgba(150,100,255,0.15);color:#aa88ff}
-  .threat-detail{font-size:13px;line-height:1.5}
-  .threat-detail .threat-msg{color:var(--text);margin-bottom:3px}
-  .threat-detail .threat-meta{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
-  .threat-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
-  .no-threats{text-align:center;padding:40px;color:var(--muted);font-size:14px}
-
-  /* 2FA PAGE */
-  .twofa-card{max-width:480px;padding:36px;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;backdrop-filter:blur(20px)}
-  .twofa-card h2{font-size:22px;font-weight:800;margin-bottom:8px}
-  .twofa-card p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px}
-  .qr-wrap{display:flex;justify-content:center;margin:20px 0;padding:16px;background:white;border-radius:12px;width:fit-content}
-  .qr-wrap img{width:180px;height:180px}
-  .secret-box{background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:10px;padding:14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--accent);letter-spacing:2px;text-align:center;margin-bottom:20px;word-break:break-all}
-  .status-pill{display:inline-block;padding:6px 16px;border-radius:20px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:20px}
-  .status-pill.on{background:rgba(0,255,140,0.12);color:var(--accent);border:1px solid rgba(0,255,140,0.3)}
-  .status-pill.off{background:rgba(255,77,106,0.1);color:var(--danger);border:1px solid rgba(255,77,106,0.3)}
-
-  /* BTNS */
-  .btn{padding:11px 22px;border-radius:10px;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s}
-  .btn-primary{background:var(--accent);color:#030a06;box-shadow:0 0 16px rgba(0,255,140,0.3)}
-  .btn-primary:hover{background:#00ffaa;box-shadow:0 0 24px rgba(0,255,140,0.5);transform:translateY(-1px)}
-  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
-  .btn-danger{background:var(--danger);color:#fff}
-  .btn-danger:hover{background:#ff6680;transform:translateY(-1px)}
-  .btn-outline{background:transparent;color:var(--accent);border:1px solid var(--glass-border)}
-  .btn-outline:hover{background:rgba(0,255,140,0.06);border-color:var(--accent)}
-
-  /* INPUT */
-  .field{margin-bottom:14px}
-  .field label{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-  .field input{width:100%;padding:12px 16px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,140,0.15);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s,box-shadow 0.2s}
-  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,140,0.1)}
-  .field input::placeholder{color:rgba(200,255,220,0.2)}
-
-  /* TOAST */
-  .toast{position:fixed;bottom:30px;right:30px;z-index:999;padding:14px 20px;background:rgba(0,0,0,0.9);border:1px solid var(--glass-border);border-radius:12px;backdrop-filter:blur(20px);font-family:'Space Mono',monospace;font-size:12px;display:flex;align-items:center;gap:10px;transform:translateY(20px);opacity:0;transition:all 0.3s;pointer-events:none}
-  .toast.show{transform:translateY(0);opacity:1}
-  .toast.success{border-color:rgba(0,255,140,0.4);color:var(--accent)}
-  .toast.error{border-color:rgba(255,77,106,0.4);color:var(--danger)}
-  .toast.warn{border-color:rgba(255,200,0,0.4);color:var(--warn)}
-
-  /* MODAL */
-  .modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
-  .modal-backdrop.show{opacity:1;pointer-events:all}
-  .modal{background:#0a1410;border:1px solid var(--glass-border);border-radius:18px;padding:32px;width:420px;box-shadow:0 0 40px var(--glow);transform:scale(0.95);transition:transform 0.2s}
-  .modal-backdrop.show .modal{transform:scale(1)}
-  .modal h3{font-size:18px;font-weight:800;margin-bottom:10px}
-  .modal p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
-  .modal-actions{display:flex;gap:10px;margin-top:20px}
-  .btn-cancel{flex:1;padding:12px;background:transparent;border:1px solid var(--glass-border);border-radius:10px;color:var(--muted);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
-  .btn-cancel:hover{border-color:var(--muted);color:var(--text)}
-  .btn-confirm-del{flex:1;padding:12px;background:var(--danger);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
-  .btn-confirm-del:hover{background:#ff6680}
-
-  /* META TABLE */
-  .meta-table{width:100%;border-collapse:collapse}
-  .meta-table tr{border-bottom:1px solid var(--glass-border)}
-  .meta-table td{padding:10px 6px;font-size:13px}
-  .meta-table td:first-child{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:40%;text-transform:uppercase;letter-spacing:1px}
-  .meta-table td:last-child{color:var(--text);font-weight:600}
-  .meta-table td span{color:var(--accent)}
-
-  /* USER RESULTS */
-  .user-results{margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
-  .user-result-item{padding:8px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.15s}
-  .user-result-item:hover{background:rgba(0,255,140,0.06);border-color:var(--accent);color:var(--accent)}
-  .shared-pill{display:inline-block;padding:3px 10px;margin:2px;background:rgba(0,207,255,0.1);border:1px solid rgba(0,207,255,0.3);border-radius:12px;font-family:'Space Mono',monospace;font-size:10px;color:var(--accent2)}
-
-  @media(max-width:768px){.sidebar{display:none}.content{margin-left:0;padding:20px}.stats{grid-template-columns:1fr 1fr}}
-</style>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 <div class="bg-layer"></div>
-
 <div class="layout">
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">Secure FS</div>
     <div class="sidebar-user">
       <div class="label">Signed in as</div>
       <div class="name" id="sidebarUser">—</div>
+      <div class="role-badge" id="roleBadge" style="display:none">ADMIN</div>
     </div>
     <div class="storage-box">
       <div class="storage-label">Storage <span id="storagePercent">0%</span></div>
@@ -222,16 +24,31 @@
     </div>
     <div class="sidebar-nav">
       <div class="nav-item active" id="nav-files" onclick="showPage('files')">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>My Files
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>My Files
       </div>
       <div class="nav-item" id="nav-shared" onclick="showPage('shared')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>Shared With Me
       </div>
+      <div class="nav-item" id="nav-activity" onclick="showPage('activity')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity
+      </div>
+      <div class="nav-item" id="nav-notes" onclick="showPage('notes')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Encrypted Notes
+      </div>
       <div class="nav-item" id="nav-security" onclick="showPage('security')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Security Log
       </div>
+      <div class="nav-item" id="nav-sessions" onclick="showPage('sessions')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Sessions
+      </div>
       <div class="nav-item" id="nav-twofa" onclick="showPage('twofa')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Two-Factor Auth
+      </div>
+      <div class="nav-item" id="nav-settings" onclick="showPage('settings')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings
+      </div>
+      <div class="nav-item" id="nav-admin" onclick="showPage('admin')" style="display:none">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Admin Panel
       </div>
     </div>
     <div class="sidebar-bottom">
@@ -239,9 +56,7 @@
     </div>
   </aside>
 
-  <!-- MAIN CONTENT -->
   <main class="content">
-
     <!-- MY FILES PAGE -->
     <div class="page active" id="page-files">
       <div class="page-title">My <span>Vault</span></div>
@@ -252,13 +67,8 @@
         <div class="stat-card"><div class="stat-label">Encryption</div><div class="stat-val" style="font-size:18px">AES-256 <span>active</span></div></div>
       </div>
       <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-        <div class="upload-icon">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-        </div>
-        <div class="upload-info">
-          <strong>Drop file here or click to browse</strong>
-          <p>Max 5 MB · Malware scanned · AES-256 encrypted</p>
-        </div>
+        <div class="upload-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+        <div class="upload-info"><strong>Drop file here or click to browse</strong><p>Max 5 MB · Malware scanned · AES-256 encrypted</p></div>
         <div class="upload-controls" onclick="event.stopPropagation()">
           <input type="file" id="fileInput" onchange="onFileChosen(this)">
           <span class="file-chosen" id="fileChosen">No file chosen</span>
@@ -272,19 +82,12 @@
           <input type="text" id="searchInput" placeholder="Search files..." oninput="filterFiles()">
         </div>
         <select class="filter-select" id="typeFilter" onchange="filterFiles()">
-          <option value="">All types</option>
-          <option value="pdf">PDF</option>
-          <option value="img">Images</option>
-          <option value="doc">Documents</option>
-          <option value="zip">Archives</option>
+          <option value="">All types</option><option value="pdf">PDF</option><option value="img">Images</option><option value="doc">Documents</option><option value="zip">Archives</option>
         </select>
       </div>
       <div class="files-header"><span>File name</span><span>Actions</span></div>
       <div class="file-list" id="fileList"></div>
-      <div class="empty-state" id="emptyState">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted);margin:0 auto"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
-        <p>No files yet. Upload your first file above.</p>
-      </div>
+      <div class="empty-state" id="emptyState"><p>No files yet. Upload your first file above.</p></div>
     </div>
 
     <!-- SHARED PAGE -->
@@ -292,9 +95,38 @@
       <div class="page-title">Shared <span>With Me</span></div>
       <div class="page-sub">Files other users have shared with you</div>
       <div class="file-list" id="sharedFileList"></div>
-      <div class="empty-state show" id="sharedEmptyState">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted);margin:0 auto"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-        <p>No files have been shared with you yet.</p>
+      <div class="empty-state show" id="sharedEmptyState"><p>No files have been shared with you yet.</p></div>
+    </div>
+
+    <!-- ACTIVITY PAGE -->
+    <div class="page" id="page-activity">
+      <div class="page-title">Activity <span>Timeline</span></div>
+      <div class="page-sub">Complete audit trail of your account actions</div>
+      <div class="timeline" id="activityTimeline"></div>
+      <div class="empty-state" id="activityEmpty" style="display:none"><p>No activity recorded yet.</p></div>
+    </div>
+
+    <!-- NOTES PAGE -->
+    <div class="page" id="page-notes">
+      <div class="page-title">Encrypted <span>Notes</span></div>
+      <div class="page-sub">AES-256 encrypted notepad · stored securely in the cloud</div>
+      <div style="display:flex;gap:12px;margin-bottom:24px">
+        <button class="btn btn-primary" onclick="newNote()">+ New Note</button>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+      <div class="empty-state" id="notesEmpty" style="display:none"><p>No notes yet. Create one above.</p></div>
+      <!-- Note Editor -->
+      <div id="noteEditor" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <button class="btn btn-outline" onclick="closeNoteEditor()">← Back</button>
+          <div class="status-pill on" style="font-size:10px">🔒 AES-256 ENCRYPTED</div>
+        </div>
+        <div class="field"><label>Title</label><input id="noteTitle" type="text" placeholder="Note title..." maxlength="200"></div>
+        <div class="field"><label>Content</label><textarea id="noteContent" style="width:100%;min-height:300px;padding:16px;background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;resize:vertical;outline:none" placeholder="Write your encrypted note..."></textarea></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn btn-primary" onclick="saveNote()">Save Note</button>
+          <button class="btn btn-danger" id="deleteNoteBtn" onclick="deleteCurrentNote()" style="display:none">Delete</button>
+        </div>
       </div>
     </div>
 
@@ -303,10 +135,15 @@
       <div class="page-title">Security <span>Log</span></div>
       <div class="page-sub">Real-time threat detection events for your account</div>
       <div class="threat-list" id="threatList"></div>
-      <div class="no-threats" id="noThreats" style="display:none">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--muted);margin:0 auto 12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <p>No threats detected. Your account is secure.</p>
-      </div>
+      <div class="no-threats" id="noThreats" style="display:none"><p>No threats detected. Your account is secure.</p></div>
+    </div>
+
+    <!-- SESSIONS PAGE -->
+    <div class="page" id="page-sessions">
+      <div class="page-title">Active <span>Sessions</span></div>
+      <div class="page-sub">Manage your login sessions across devices</div>
+      <div style="margin-bottom:20px"><button class="btn btn-danger" onclick="revokeAllSessions()">Revoke All Other Sessions</button></div>
+      <div class="session-list" id="sessionList"></div>
     </div>
 
     <!-- 2FA PAGE -->
@@ -314,461 +151,67 @@
       <div class="page-title">Two-Factor <span>Auth</span></div>
       <div class="page-sub">TOTP-based second factor via authenticator app</div>
       <div class="twofa-card">
-        <div style="margin-bottom:16px">
-          Status: <span class="status-pill off" id="twofaStatus">Disabled</span>
-        </div>
-        <p>Two-factor authentication adds an extra layer of security. After enabling, you'll need a 6-digit code from your authenticator app (Google Authenticator, Authy, etc.) every time you log in.</p>
-
-        <!-- SETUP SECTION -->
+        <div style="margin-bottom:16px">Status: <span class="status-pill off" id="twofaStatus">Disabled</span></div>
+        <p>Two-factor authentication adds an extra layer of security. After enabling, you'll need a 6-digit code from your authenticator app every time you log in.</p>
         <div id="twofaSetup" style="display:none">
           <p style="color:var(--accent);font-size:13px;margin-bottom:16px">1. Scan this QR code with your authenticator app:</p>
           <div class="qr-wrap" id="qrWrap"></div>
           <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Or enter this secret manually:</p>
           <div class="secret-box" id="secretBox">—</div>
           <p style="font-size:13px;color:var(--accent);margin-bottom:12px">2. Enter the 6-digit code from your app to confirm:</p>
-          <div class="field">
-            <label>Verification Code</label>
-            <input id="twofaOTP" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
-          </div>
-          <div style="display:flex;gap:10px">
-            <button class="btn btn-primary" onclick="enable2FA()">Enable 2FA</button>
-            <button class="btn btn-outline" onclick="cancelSetup()">Cancel</button>
-          </div>
+          <div class="field"><label>Verification Code</label><input id="twofaOTP" type="text" inputmode="numeric" maxlength="6" placeholder="000000"></div>
+          <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="enable2FA()">Enable 2FA</button><button class="btn btn-outline" onclick="cancelSetup()">Cancel</button></div>
         </div>
-
-        <!-- ENABLED CONTROLS -->
         <div id="twofaEnabled" style="display:none">
-          <p style="color:var(--muted);font-size:13px;margin-bottom:16px">2FA is active on your account. To disable it, confirm your password.</p>
-          <div class="field">
-            <label>Current Password</label>
-            <input id="twofaDisablePass" type="password" placeholder="••••••••">
-          </div>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:16px">2FA is active. To disable, confirm your password.</p>
+          <div class="field"><label>Current Password</label><input id="twofaDisablePass" type="password" placeholder="••••••••"></div>
           <button class="btn btn-danger" onclick="disable2FA()">Disable 2FA</button>
         </div>
-
-        <!-- DISABLED CONTROLS -->
-        <div id="twofaDisabled">
-          <button class="btn btn-primary" onclick="setup2FA()">Set Up 2FA</button>
-        </div>
+        <div id="twofaDisabled"><button class="btn btn-primary" onclick="setup2FA()">Set Up 2FA</button></div>
       </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="page-title">Account <span>Settings</span></div>
+      <div class="page-sub">Manage your account security and preferences</div>
+      <div class="twofa-card">
+        <h2 style="margin-bottom:16px">Change Password</h2>
+        <div class="field"><label>Current Password</label><input id="currentPass" type="password" placeholder="••••••••"></div>
+        <div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="Min 8 characters"></div>
+        <div class="field"><label>Confirm New Password</label><input id="confirmPass" type="password" placeholder="••••••••"></div>
+        <div class="pw-strength" id="pwStrength"></div>
+        <button class="btn btn-primary" onclick="changePassword()" style="margin-top:12px">Update Password</button>
+      </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div class="page" id="page-admin">
+      <div class="page-title">Admin <span>Panel</span></div>
+      <div class="page-sub">System-wide management · admin access only</div>
+      <div class="stats" id="adminStats"></div>
+      <div class="section-label">ALL USERS</div>
+      <div class="file-list" id="adminUserList"></div>
+      <div class="section-label" style="margin-top:32px">GLOBAL THREAT LOG</div>
+      <div class="threat-list" id="adminThreatList"></div>
     </div>
 
   </main>
 </div>
 
-<!-- DELETE MODAL -->
-<div class="modal-backdrop" id="deleteModal">
-  <div class="modal">
-    <h3>Delete file?</h3>
-    <p>This is permanent. The encrypted file will be removed from your vault.</p>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn-confirm-del" onclick="confirmDelete()">Delete</button>
-    </div>
-  </div>
-</div>
+<!-- MODALS -->
+<div class="modal-backdrop" id="deleteModal"><div class="modal"><h3>Delete file?</h3><p>This is permanent. The encrypted file and all versions will be removed.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button><button class="btn-confirm-del" onclick="confirmDelete()">Delete</button></div></div></div>
 
-<!-- SHARE MODAL -->
-<div class="modal-backdrop" id="shareModal">
-  <div class="modal">
-    <h3>Share File</h3>
-    <p>Share this file with another registered user. They will be able to view and download it.</p>
-    <div class="field">
-      <label>Search Username</label>
-      <input id="shareSearch" type="text" placeholder="Type a username..." oninput="searchUsers()">
-    </div>
-    <div class="user-results" id="userResults"></div>
-    <div id="currentlyShared" style="margin-top:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('shareModal')">Close</button>
-    </div>
-  </div>
-</div>
+<div class="modal-backdrop" id="shareModal"><div class="modal"><h3>Share File</h3><p>Share this file with another registered user.</p><div class="field"><label>Search Username</label><input id="shareSearch" type="text" placeholder="Type a username..." oninput="searchUsers()"></div><div class="user-results" id="userResults"></div><div id="currentlyShared" style="margin-top:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('shareModal')">Close</button></div></div></div>
 
-<!-- METADATA MODAL -->
-<div class="modal-backdrop" id="metaModal">
-  <div class="modal">
-    <h3 id="metaTitle">File Details</h3>
-    <p style="margin-bottom:16px">Encryption and access metadata</p>
-    <table class="meta-table" id="metaTable"></table>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('metaModal')">Close</button>
-    </div>
-  </div>
-</div>
+<div class="modal-backdrop" id="metaModal"><div class="modal"><h3 id="metaTitle">File Details</h3><p style="margin-bottom:16px">Encryption and access metadata</p><table class="meta-table" id="metaTable"></table><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('metaModal')">Close</button></div></div></div>
 
-<!-- TOAST -->
+<div class="modal-backdrop" id="versionModal"><div class="modal"><h3 id="versionTitle">Version History</h3><p style="margin-bottom:16px">Previous versions of this file</p><div id="versionList" class="file-list"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('versionModal')">Close</button></div></div></div>
+
+<div class="modal-backdrop" id="previewModal"><div class="modal" style="width:700px;max-height:85vh;overflow:auto"><h3 id="previewTitle">Preview</h3><div id="previewContent" style="margin-top:16px"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('previewModal')">Close</button></div></div></div>
+
 <div class="toast" id="toast"></div>
 
-<script>
-const BASE   = window.location.origin;
-const token  = sessionStorage.getItem('token');
-const currentUser = sessionStorage.getItem('user');
-
-if (!token || !currentUser) window.location = 'index.html';
-document.getElementById('sidebarUser').textContent = currentUser;
-
-const authHdr = () => ({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' });
-
-// ── HTML ESCAPE (XSS prevention) ──────────
-function esc(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-// ── TOAST ──────────────────────────────────
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  setTimeout(() => t.className = 'toast', 3500);
-}
-
-// ── PAGE NAV ──────────────────────────────
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  document.getElementById('nav-' + id).classList.add('active');
-  if (id === 'security') loadSecurityLog();
-  if (id === 'twofa')    load2FAStatus();
-}
-
-// ── STORAGE ───────────────────────────────
-function updateStorage(ownedFiles) {
-  const usedBytes = ownedFiles.reduce((a, f) => a + (f.size || 0), 0);
-  const usedMB    = usedBytes / (1024 * 1024);
-  const pct       = Math.min((usedMB / 50) * 100, 100);
-  document.getElementById('storageFill').style.width    = pct + '%';
-  document.getElementById('storagePercent').textContent = pct.toFixed(1) + '%';
-  document.getElementById('storageInfo').textContent    = `${usedMB.toFixed(2)} MB of 50 MB used`;
-  document.getElementById('storageUsed').innerHTML      = `${usedMB.toFixed(2)} <span>MB</span>`;
-}
-
-// ── FILE TYPE ─────────────────────────────
-function getFileType(name) {
-  const ext = (name || '').split('.').pop().toLowerCase();
-  if (['pdf'].includes(ext)) return 'pdf';
-  if (['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext)) return 'img';
-  if (['doc','docx','txt','md','xls','xlsx','ppt','pptx','csv'].includes(ext)) return 'doc';
-  if (['zip','rar','tar','gz','7z'].includes(ext)) return 'zip';
-  return 'file';
-}
-function fmtSize(bytes) {
-  if (!bytes) return '—';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/(1024*1024)).toFixed(2) + ' MB';
-}
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString();
-}
-
-// ── LOAD FILES ────────────────────────────
-let allOwned = [], allShared = [];
-let fileToDelete = null, fileToShare = null;
-
-async function loadFiles() {
-  try {
-    const res  = await fetch(BASE + '/files', { headers: authHdr() });
-    if (res.status === 401) return window.location = 'index.html';
-    const data = await res.json();
-    allOwned   = data.owned  || [];
-    allShared  = data.shared || [];
-    document.getElementById('totalFiles').innerHTML = `${allOwned.length} <span>files</span>`;
-    updateStorage(allOwned);
-    filterFiles();
-    renderShared();
-  } catch {
-    showToast('Cannot connect to server', 'error');
-  }
-}
-
-// ── RENDER OWN FILES ──────────────────────
-function renderFiles(files) {
-  const list  = document.getElementById('fileList');
-  const empty = document.getElementById('emptyState');
-  if (!files.length) { list.innerHTML = ''; empty.classList.add('show'); return; }
-  empty.classList.remove('show');
-  list.innerHTML = files.map((f, i) => {
-    const type = getFileType(f.name);
-    const ext  = esc((f.name.split('.').pop() || '').toUpperCase());
-    const name = esc(f.name);
-    return `<div class="file-card" style="animation-delay:${i*0.04}s">
-      <div class="file-icon type-${type}">${ext}</div>
-      <div class="file-meta">
-        <div class="file-name">${name}</div>
-        <div class="file-tags">
-          <span class="file-tag">Encrypted</span>
-          <span class="file-tag">${fmtSize(f.size)}</span>
-          ${f.sharedWith && f.sharedWith.length ? `<span class="file-tag shared">Shared (${f.sharedWith.length})</span>` : ''}
-        </div>
-      </div>
-      <div class="file-actions">
-        <button class="icon-btn btn-info"     onclick="viewMeta('${f.id}')" title="Metadata">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        </button>
-        <button class="icon-btn btn-share-f"  onclick="openShare('${f.id}')" title="Share">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-        </button>
-        <button class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g, "\\'")}')"
- title="Download">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        </button>
-        <button class="icon-btn btn-delete"   onclick="askDelete('${f.id}')" title="Delete">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── RENDER SHARED ─────────────────────────
-function renderShared() {
-  const list  = document.getElementById('sharedFileList');
-  const empty = document.getElementById('sharedEmptyState');
-  if (!allShared.length) { list.innerHTML = ''; empty.classList.add('show'); return; }
-  empty.classList.remove('show');
-  list.innerHTML = allShared.map((f, i) => {
-    const type = getFileType(f.name);
-    const ext  = esc((f.name.split('.').pop() || '').toUpperCase());
-    const name = esc(f.name);
-    return `<div class="file-card" style="animation-delay:${i*0.04}s">
-      <div class="file-icon type-${type}">${ext}</div>
-      <div class="file-meta">
-        <div class="file-name">${name}</div>
-        <div class="file-tags">
-          <span class="file-tag">From: ${esc(f.owner)}</span>
-          <span class="file-tag">${fmtSize(f.size)}</span>
-        </div>
-      </div>
-      <div class="file-actions">
-        <button class="icon-btn btn-info"     onclick="viewMeta('${f.id}')" title="Metadata">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        </button>
-        <button class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g, "\\'")}')"
- title="Download">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── FILTER ────────────────────────────────
-function filterFiles() {
-  const q    = document.getElementById('searchInput').value.toLowerCase();
-  const type = document.getElementById('typeFilter').value;
-  renderFiles(allOwned.filter(f => {
-    const matchSearch = f.name.toLowerCase().includes(q);
-    const matchType   = !type || getFileType(f.name) === type;
-    return matchSearch && matchType;
-  }));
-}
-
-// ── UPLOAD ────────────────────────────────
-function onFileChosen(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (file.size > 5*1024*1024) { input.value=''; return showToast('File must be < 5 MB', 'error'); }
-  document.getElementById('fileChosen').textContent = file.name;
-  document.getElementById('uploadBtn').disabled = false;
-}
-const zone = document.getElementById('uploadZone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => {
-  e.preventDefault(); zone.classList.remove('drag-over');
-  const fi = document.getElementById('fileInput');
-  if (e.dataTransfer.files.length) {
-    const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]);
-    fi.files = dt.files; onFileChosen(fi);
-  }
-});
-
-async function uploadFile() {
-  const fi  = document.getElementById('fileInput');
-  if (!fi.files.length) return;
-  const prog = document.getElementById('uploadProgress');
-  const btn  = document.getElementById('uploadBtn');
-  prog.classList.add('show'); btn.disabled = true; btn.textContent = 'Uploading...';
-  const fd = new FormData();
-  fd.append('file', fi.files[0]);
-  try {
-    const res  = await fetch(BASE+'/upload', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
-    const data = await res.json();
-    if (res.ok) { showToast('File encrypted & uploaded ✓', 'success'); fi.value=''; document.getElementById('fileChosen').textContent='No file chosen'; loadFiles(); }
-    else         showToast(data.error || 'Upload failed', 'error');
-  } catch { showToast('Server error during upload', 'error'); }
-  finally { prog.classList.remove('show'); btn.disabled=false; btn.textContent='Upload'; }
-}
-
-// ── DOWNLOAD ──────────────────────────────
-function downloadFile(id, name) {
-  const a = document.createElement('a');
-  a.href  = `${BASE}/download/${id}`;
-  a.setAttribute('download', name);
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', `${BASE}/download/${id}`);
-  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-  xhr.responseType = 'blob';
-  xhr.onload = () => {
-    const url = URL.createObjectURL(xhr.response);
-    a.href = url; a.click(); URL.revokeObjectURL(url);
-  };
-  xhr.onerror = () => showToast('Download failed', 'error');
-  xhr.send();
-}
-
-// ── DELETE ────────────────────────────────
-function askDelete(id) { fileToDelete = id; document.getElementById('deleteModal').classList.add('show'); }
-async function confirmDelete() {
-  const id = fileToDelete;
-  closeModal('deleteModal');
-  if (!id) return;
-  const res = await fetch(`${BASE}/delete/${id}`, { method:'DELETE', headers: authHdr() });
-  const d   = await res.json();
-  showToast(res.ok ? 'File deleted' : (d.error || 'Delete failed'), res.ok ? 'success' : 'error');
-  if (res.ok) loadFiles();
-}
-
-// ── SHARE ─────────────────────────────────
-function openShare(id) {
-  fileToShare = id;
-  document.getElementById('shareSearch').value = '';
-  document.getElementById('userResults').innerHTML = '';
-  const file = allOwned.find(f => f.id === id);
-  const sw   = file?.sharedWith || [];
-  document.getElementById('currentlyShared').innerHTML = sw.length
-    ? 'Currently shared with: ' + sw.map(u => `<span class="shared-pill">${u}</span>`).join('')
-    : 'Not shared with anyone.';
-  document.getElementById('shareModal').classList.add('show');
-}
-let searchTimer;
-async function searchUsers() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(async () => {
-    const q = document.getElementById('shareSearch').value.trim();
-    if (q.length < 2) { document.getElementById('userResults').innerHTML = ''; return; }
-    const res   = await fetch(`${BASE}/users/search?q=${encodeURIComponent(q)}`, { headers: authHdr() });
-    const users = await res.json();
-    document.getElementById('userResults').innerHTML = users.map(u =>
-      `<div class="user-result-item" onclick="shareWith('${u.username}')">${u.username}</div>`
-    ).join('') || '<div style="padding:8px;color:var(--muted);font-size:12px">No users found</div>';
-  }, 300);
-}
-async function shareWith(username) {
-  const res = await fetch(`${BASE}/share/${fileToShare}`, {
-    method: 'POST', headers: authHdr(),
-    body: JSON.stringify({ shareWith: username })
-  });
-  const d = await res.json();
-  showToast(res.ok ? `Shared with ${username} ✓` : (d.error || 'Share failed'), res.ok ? 'success' : 'error');
-  if (res.ok) { loadFiles(); closeModal('shareModal'); }
-}
-
-// ── METADATA ──────────────────────────────
-async function viewMeta(id) {
-  try {
-    const res  = await fetch(`${BASE}/metadata/${id}`, { headers: authHdr() });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Failed to load metadata', 'error');
-    document.getElementById('metaTitle').textContent = data.name;
-    document.getElementById('metaTable').innerHTML = `
-      <tr><td>File Name</td><td><span>${esc(data.name)}</span></td></tr>
-      <tr><td>Size</td><td>${fmtSize(data.size)}</td></tr>
-      <tr><td>Type</td><td>${esc(data.mimetype || '—')}</td></tr>
-      <tr><td>Owner</td><td>${esc(data.owner)}</td></tr>
-      <tr><td>Uploaded</td><td>${fmtDate(data.uploadedAt)}</td></tr>
-      <tr><td>Encryption</td><td><span>${esc(data.encryption)}</span></td></tr>
-      <tr><td>Shared With</td><td>${data.sharedWith && data.sharedWith.length ? data.sharedWith.map(u => esc(u)).join(', ') : 'Nobody'}</td></tr>
-      <tr><td>Access Count</td><td>${data.accessLog ? data.accessLog.length : 0} events</td></tr>
-    `;
-    document.getElementById('metaModal').classList.add('show');
-  } catch { showToast('Could not fetch metadata', 'error'); }
-}
-
-// ── SECURITY LOG ──────────────────────────
-async function loadSecurityLog() {
-  const list    = document.getElementById('threatList');
-  const noThreats = document.getElementById('noThreats');
-  list.innerHTML = '<div style="color:var(--muted);padding:20px;font-family:Space Mono,monospace;font-size:12px">Loading...</div>';
-  try {
-    const res     = await fetch(BASE+'/security-log', { headers: authHdr() });
-    const threats = await res.json();
-    if (!threats.length) { list.innerHTML=''; noThreats.style.display='block'; return; }
-    noThreats.style.display = 'none';
-    list.innerHTML = threats.map(t => `
-      <div class="threat-card">
-        <span class="threat-badge badge-${t.type}">${t.type.replace('_',' ')}</span>
-        <div class="threat-detail">
-          <div class="threat-msg">${t.detail}</div>
-          <div class="threat-meta">IP: ${t.ip}</div>
-        </div>
-        <div class="threat-time">${fmtDate(t.timestamp)}</div>
-      </div>`).join('');
-  } catch { list.innerHTML='<div style="color:var(--danger);padding:20px">Could not load security log.</div>'; }
-}
-
-// ── 2FA ───────────────────────────────────
-let twoFAEnabled = false;
-async function load2FAStatus() {
-  const res  = await fetch(BASE+'/2fa/status', { headers: authHdr() });
-  const data = await res.json();
-  twoFAEnabled = data.enabled;
-  const pill = document.getElementById('twofaStatus');
-  pill.textContent = twoFAEnabled ? 'Enabled' : 'Disabled';
-  pill.className   = `status-pill ${twoFAEnabled ? 'on' : 'off'}`;
-  document.getElementById('twofaSetup').style.display    = 'none';
-  document.getElementById('twofaEnabled').style.display  = twoFAEnabled ? 'block' : 'none';
-  document.getElementById('twofaDisabled').style.display = twoFAEnabled ? 'none'  : 'block';
-}
-async function setup2FA() {
-  const res  = await fetch(BASE+'/2fa/setup', { method:'POST', headers: authHdr() });
-  const data = await res.json();
-  if (!res.ok) return showToast(data.error || 'Setup failed', 'error');
-  document.getElementById('qrWrap').innerHTML   = `<img src="${data.qr}" alt="QR Code">`;
-  document.getElementById('secretBox').textContent = data.secret;
-  document.getElementById('twofaSetup').style.display    = 'block';
-  document.getElementById('twofaDisabled').style.display = 'none';
-}
-async function enable2FA() {
-  const code = document.getElementById('twofaOTP').value.trim();
-  if (!code || code.length !== 6) return showToast('Enter 6-digit code', 'warn');
-  const res  = await fetch(BASE+'/2fa/enable', { method:'POST', headers: authHdr(), body: JSON.stringify({token:code}) });
-  const data = await res.json();
-  showToast(res.ok ? '2FA enabled! ✓' : (data.error || 'Invalid code'), res.ok ? 'success' : 'error');
-  if (res.ok) load2FAStatus();
-}
-function cancelSetup() {
-  document.getElementById('twofaSetup').style.display    = 'none';
-  document.getElementById('twofaDisabled').style.display = 'block';
-}
-async function disable2FA() {
-  const pass = document.getElementById('twofaDisablePass').value;
-  if (!pass) return showToast('Enter your password', 'warn');
-  const res  = await fetch(BASE+'/2fa/disable', { method:'POST', headers: authHdr(), body: JSON.stringify({password:pass}) });
-  const data = await res.json();
-  showToast(res.ok ? '2FA disabled' : (data.error || 'Failed'), res.ok ? 'success' : 'error');
-  if (res.ok) { document.getElementById('twofaDisablePass').value=''; load2FAStatus(); }
-}
-
-// ── MODAL HELPERS ─────────────────────────
-function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
-  fileToDelete = null;
-}
-document.querySelectorAll('.modal-backdrop').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
-});
-
-// ── LOGOUT ───────────────────────────────
-function logout() { sessionStorage.clear(); window.location = 'index.html'; }
-
-// ── INIT ─────────────────────────────────
-loadFiles();
-</script>
+<script src="dashboard.js"></script>
 </body>
 </html>
