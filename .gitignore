@@ -1,3 +1,5 @@
 node_modules/
 backend/jwt-secret.txt
 backend/uploads/
+.env
+*.env.local

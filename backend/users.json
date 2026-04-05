@@ -22,5 +22,13 @@
     "twoFactorSecret": null,
     "createdAt": "2026-04-05T06:02:54.063Z",
     "role": "user"
+  },
+  {
+    "username": "sm09569845@gmail.com",
+    "password": "$2b$12$TLdxg4qaipW87qkEGFlDS.OnPmLP5RjX304voW.69VL72a9sRCODK",
+    "twoFactorEnabled": false,
+    "twoFactorSecret": null,
+    "createdAt": "2026-04-05T17:06:15.357Z",
+    "role": "user"
   }
 ]

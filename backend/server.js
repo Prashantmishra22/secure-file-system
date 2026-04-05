@@ -3,67 +3,44 @@ const multer      = require('multer');
 const bcrypt      = require('bcrypt');
 const cors        = require('cors');
 const crypto      = require('crypto');
-const fs          = require('fs');
 const path        = require('path');
 const jwt         = require('jsonwebtoken');
 const speakeasy   = require('speakeasy');
 const QRCode      = require('qrcode');
 const rateLimit   = require('express-rate-limit');
 const helmet      = require('helmet');
+const mongoose    = require('mongoose');
+
 const { detectMalware, detectBufferOverflow, logThreat, getThreats } = require('./security');
+const User   = require('./models/User');
+const File   = require('./models/File');
 
 const app = express();
+
+/* ───────── ENVIRONMENT ───────── */
+const PORT         = process.env.PORT || 3000;
+const MONGODB_URI  = process.env.MONGODB_URI || 'mongodb://localhost:27017/secure-file-system';
+const JWT_SECRET   = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+
+/* ───────── MONGODB CONNECTION ───────── */
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.error('   Make sure MONGODB_URI environment variable is set correctly.');
+    process.exit(1);
+  });
 
 /* ───────── SECURITY HEADERS ───────── */
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
 app.use(cors({ origin: '*', exposedHeaders: ['Authorization'] }));
 
+// Trust proxy for correct IP detection behind Render/Railway
+app.set('trust proxy', 1);
+
 /* ───────── SERVE FRONTEND ───────── */
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
-
-/* ───────── JWT SECRET (persisted so sessions survive restarts) ───────── */
-const JWT_SECRET_FILE = path.join(__dirname, 'jwt-secret.txt');
-const JWT_SECRET = (() => {
-  if (fs.existsSync(JWT_SECRET_FILE)) return fs.readFileSync(JWT_SECRET_FILE, 'utf8').trim();
-  const secret = crypto.randomBytes(64).toString('hex');
-  fs.writeFileSync(JWT_SECRET_FILE, secret);
-  return secret;
-})();
-
-/* ───────── DIRS & FILES ───────── */
-const UPLOADS_DIR  = path.join(__dirname, 'uploads');
-const USERS_FILE   = path.join(__dirname, 'users.json');
-const FILES_FILE   = path.join(__dirname, 'files.json');
-
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
-
-/* ───────── PERSISTENCE HELPERS ───────── */
-function loadJSON(file, fallback = []) {
-  if (fs.existsSync(file)) {
-    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
-  }
-  return fallback;
-}
-function saveJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-let users = loadJSON(USERS_FILE);
-let files = loadJSON(FILES_FILE);
-
-function saveUsers() { saveJSON(USERS_FILE, users); }
-function saveFiles() { saveJSON(FILES_FILE, files); }
-
-/* ───────── STARTUP MIGRATION — backfill missing user fields ───────── */
-let migrated = false;
-users.forEach(u => {
-  if (u.role === undefined)             { u.role = 'user';  migrated = true; }
-  if (u.twoFactorEnabled === undefined) { u.twoFactorEnabled = false; migrated = true; }
-  if (u.twoFactorSecret === undefined)  { u.twoFactorSecret = null;  migrated = true; }
-  if (u.createdAt === undefined)        { u.createdAt = new Date().toISOString(); migrated = true; }
-});
-if (migrated) { saveUsers(); console.log('⚙️  Migrated legacy user records'); }
 
 /* ───────── MULTER — memory storage for magic byte checks ───────── */
 const upload = multer({
@@ -74,7 +51,7 @@ const upload = multer({
 /* ───────── RATE LIMITERS ───────── */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,   // 15 minutes
-  max:      10,
+  max:      20,
   message:  'Too many attempts. Please try again in 15 minutes.',
   handler: (req, res, next, options) => {
     logThreat(req.body?.username || 'unknown', 'BRUTE_FORCE',
@@ -84,8 +61,8 @@ const authLimiter = rateLimit({
 });
 
 const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
-  max:      30,               // 30 uploads per window
+  windowMs: 15 * 60 * 1000,
+  max:      30,
   message:  'Too many uploads. Please try again later.',
   handler: (req, res, next, options) => {
     logThreat(req.user?.username || 'unknown', 'BRUTE_FORCE',
@@ -110,169 +87,205 @@ function requireAuth(req, res, next) {
   }
 }
 
+/* ───────── HEALTH CHECK ───────── */
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
+
 /* ───────── SIGNUP ───────── */
 app.post('/signup', authLimiter, async (req, res) => {
-  // Buffer overflow check
-  const bof = detectBufferOverflow(req);
-  if (!bof.safe) {
-    logThreat(req.body?.username || 'unknown', 'BUFFER_OVERFLOW', bof.reason, req.ip);
-    return res.status(400).json({ error: bof.reason });
+  try {
+    const bof = detectBufferOverflow(req);
+    if (!bof.safe) {
+      await logThreat(req.body?.username || 'unknown', 'BUFFER_OVERFLOW', bof.reason, req.ip);
+      return res.status(400).json({ error: bof.reason });
+    }
+
+    const { username, password } = req.body;
+    if (!username || !password)
+      return res.status(400).json({ error: 'Fill all fields' });
+
+    if (username.length > 100)
+      return res.status(400).json({ error: 'Username too long' });
+
+    const existing = await User.findOne({ username });
+    if (existing)
+      return res.status(400).json({ error: 'User already exists' });
+
+    if (password.length < 8)
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    const hash = await bcrypt.hash(password, 12);
+    await User.create({ username, password: hash });
+
+    res.json({ message: 'Signup successful' });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Server error during signup' });
   }
-
-  const { username, password } = req.body;
-  if (!username || !password)
-    return res.status(400).json({ error: 'Fill all fields' });
-
-  if (username.length > 100)
-    return res.status(400).json({ error: 'Username too long' });
-
-  if (users.find(u => u.username === username))
-    return res.status(400).json({ error: 'User already exists' });
-
-  if (password.length < 8)
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
-
-  const hash = await bcrypt.hash(password, 12);
-  users.push({
-    username,
-    password: hash,
-    twoFactorEnabled: false,
-    twoFactorSecret: null,
-    createdAt: new Date().toISOString(),
-    role: 'user'
-  });
-  saveUsers();
-  res.json({ message: 'Signup successful' });
 });
 
 /* ───────── LOGIN ───────── */
 app.post('/login', authLimiter, async (req, res) => {
-  const bof = detectBufferOverflow(req);
-  if (!bof.safe) {
-    logThreat(req.body?.username || 'unknown', 'BUFFER_OVERFLOW', bof.reason, req.ip);
-    return res.status(400).json({ error: bof.reason });
+  try {
+    const bof = detectBufferOverflow(req);
+    if (!bof.safe) {
+      await logThreat(req.body?.username || 'unknown', 'BUFFER_OVERFLOW', bof.reason, req.ip);
+      return res.status(400).json({ error: bof.reason });
+    }
+
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+
+    if (!user) return res.status(400).json({ error: 'User not found' });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      await logThreat(username, 'BRUTE_FORCE', 'Failed login attempt', req.ip);
+      return res.status(400).json({ error: 'Wrong password' });
+    }
+
+    // If 2FA is enabled, issue a partial token and require OTP
+    if (user.twoFactorEnabled) {
+      const partialToken = jwt.sign(
+        { username, partial: true },
+        JWT_SECRET,
+        { expiresIn: '5m' }
+      );
+      return res.json({ requires2FA: true, partialToken });
+    }
+
+    // Full session token
+    const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token, username });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
   }
-
-  const { username, password } = req.body;
-  const user = users.find(u => u.username === username);
-
-  if (!user) return res.status(400).json({ error: 'User not found' });
-
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) {
-    logThreat(username, 'BRUTE_FORCE', 'Failed login attempt', req.ip);
-    return res.status(400).json({ error: 'Wrong password' });
-  }
-
-  // If 2FA is enabled, issue a partial token and require OTP
-  if (user.twoFactorEnabled) {
-    const partialToken = jwt.sign(
-      { username, partial: true },
-      JWT_SECRET,
-      { expiresIn: '5m' }
-    );
-    return res.json({ requires2FA: true, partialToken });
-  }
-
-  // Full session token
-  const token = jwt.sign({ username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, username });
 });
 
 /* ───────── 2FA SETUP (Generate QR) ───────── */
 app.post('/2fa/setup', requireAuth, async (req, res) => {
-  const user = users.find(u => u.username === req.user.username);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const secret = speakeasy.generateSecret({
-    name: `SecureFS (${req.user.username})`,
-    length: 20
-  });
+    const secret = speakeasy.generateSecret({
+      name: `SecureFS (${req.user.username})`,
+      length: 20
+    });
 
-  user.twoFactorSecret = secret.base32;
-  saveUsers();
+    user.twoFactorSecret = secret.base32;
+    await user.save();
 
-  const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
-  res.json({ secret: secret.base32, qr: qrDataUrl });
+    const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+    res.json({ secret: secret.base32, qr: qrDataUrl });
+  } catch (err) {
+    console.error('2FA setup error:', err);
+    res.status(500).json({ error: 'Server error during 2FA setup' });
+  }
 });
 
 /* ───────── 2FA ENABLE (Confirm OTP) ───────── */
-app.post('/2fa/enable', requireAuth, (req, res) => {
-  const { token } = req.body;
-  const user = users.find(u => u.username === req.user.username);
-  if (!user || !user.twoFactorSecret)
-    return res.status(400).json({ error: '2FA not set up yet' });
+app.post('/2fa/enable', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findOne({ username: req.user.username });
+    if (!user || !user.twoFactorSecret)
+      return res.status(400).json({ error: '2FA not set up yet' });
 
-  const valid = speakeasy.totp.verify({
-    secret: user.twoFactorSecret,
-    encoding: 'base32',
-    token,
-    window: 1
-  });
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1
+    });
 
-  if (!valid) return res.status(400).json({ error: 'Invalid OTP code' });
+    if (!valid) return res.status(400).json({ error: 'Invalid OTP code' });
 
-  user.twoFactorEnabled = true;
-  saveUsers();
-  res.json({ message: '2FA enabled successfully' });
+    user.twoFactorEnabled = true;
+    await user.save();
+    res.json({ message: '2FA enabled successfully' });
+  } catch (err) {
+    console.error('2FA enable error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 /* ───────── 2FA DISABLE ───────── */
 app.post('/2fa/disable', requireAuth, async (req, res) => {
-  const { password } = req.body;
-  const user = users.find(u => u.username === req.user.username);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const { password } = req.body;
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(400).json({ error: 'Incorrect password' });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ error: 'Incorrect password' });
 
-  user.twoFactorEnabled = false;
-  user.twoFactorSecret  = null;
-  saveUsers();
-  res.json({ message: '2FA disabled' });
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret  = null;
+    await user.save();
+    res.json({ message: '2FA disabled' });
+  } catch (err) {
+    console.error('2FA disable error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 /* ───────── 2FA VERIFY (Complete Login) ───────── */
-app.post('/2fa/verify', authLimiter, (req, res) => {
-  const { token: otpCode, partialToken } = req.body;
-
-  let payload;
+app.post('/2fa/verify', authLimiter, async (req, res) => {
   try {
-    payload = jwt.verify(partialToken, JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    const { token: otpCode, partialToken } = req.body;
+
+    let payload;
+    try {
+      payload = jwt.verify(partialToken, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+
+    if (!payload.partial) return res.status(400).json({ error: 'Invalid token type' });
+
+    const user = await User.findOne({ username: payload.username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: otpCode,
+      window: 1
+    });
+
+    if (!valid) {
+      await logThreat(user.username, 'BRUTE_FORCE', '2FA code verification failed', req.ip);
+      return res.status(400).json({ error: 'Invalid 2FA code' });
+    }
+
+    const fullToken = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token: fullToken, username: user.username });
+  } catch (err) {
+    console.error('2FA verify error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
-
-  if (!payload.partial) return res.status(400).json({ error: 'Invalid token type' });
-
-  const user = users.find(u => u.username === payload.username);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const valid = speakeasy.totp.verify({
-    secret: user.twoFactorSecret,
-    encoding: 'base32',
-    token: otpCode,
-    window: 1
-  });
-
-  if (!valid) {
-    logThreat(user.username, 'BRUTE_FORCE', '2FA code verification failed', req.ip);
-    return res.status(400).json({ error: 'Invalid 2FA code' });
-  }
-
-  const fullToken = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token: fullToken, username: user.username });
 });
 
 /* ───────── GET 2FA STATUS ───────── */
-app.get('/2fa/status', requireAuth, (req, res) => {
-  const user = users.find(u => u.username === req.user.username);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ enabled: user.twoFactorEnabled });
+app.get('/2fa/status', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ enabled: user.twoFactorEnabled });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 /* ───────── UPLOAD ───────── */
-app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), (req, res) => {
+app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     const file     = req.file;
     const username = req.user.username;
@@ -282,14 +295,14 @@ app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), (req, res
     // Buffer overflow check on filename
     const bof = detectBufferOverflow(req);
     if (!bof.safe) {
-      logThreat(username, 'BUFFER_OVERFLOW', bof.reason, req.ip);
+      await logThreat(username, 'BUFFER_OVERFLOW', bof.reason, req.ip);
       return res.status(400).json({ error: bof.reason });
     }
 
     // Malware detection
     const scan = detectMalware(file);
     if (!scan.safe) {
-      logThreat(username, 'MALWARE', `${scan.reason} — file: ${file.originalname}`, req.ip);
+      await logThreat(username, 'MALWARE', `${scan.reason} — file: ${file.originalname}`, req.ip);
       return res.status(400).json({ error: `Security threat detected: ${scan.reason}` });
     }
 
@@ -299,25 +312,20 @@ app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), (req, res
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 
     const encrypted = Buffer.concat([cipher.update(file.buffer), cipher.final()]);
-    const encName   = crypto.randomBytes(16).toString('hex') + '.enc';
-    const encPath   = path.join(UPLOADS_DIR, encName);
-    fs.writeFileSync(encPath, encrypted);
 
-    files.push({
-      id:           crypto.randomBytes(8).toString('hex'),
-      owner:        username,
-      name:         file.originalname,
-      encName,
-      path:         encPath,
-      key:          key.toString('hex'),
-      iv:           iv.toString('hex'),
-      size:         file.size,
-      mimetype:     file.mimetype,
-      uploadedAt:   new Date().toISOString(),
-      sharedWith:   [],
-      accessLog:    []
+    // Store encrypted data in MongoDB (not on disk)
+    await File.create({
+      fileId:        crypto.randomBytes(8).toString('hex'),
+      owner:         username,
+      name:          file.originalname,
+      encryptedData: encrypted,
+      key:           key.toString('hex'),
+      iv:            iv.toString('hex'),
+      size:          file.size,
+      mimetype:      file.mimetype,
+      sharedWith:    [],
+      accessLog:     []
     });
-    saveFiles();
 
     res.json({ message: 'File encrypted & uploaded successfully' });
   } catch (err) {
@@ -334,145 +342,193 @@ app.use((err, req, res, next) => {
 });
 
 /* ───────── LIST FILES (own + shared) ───────── */
-app.get('/files', requireAuth, (req, res) => {
-  const username = req.user.username;
-  const ownFiles = files
-    .filter(f => f.owner === username)
-    .map(f => ({
-      id: f.id, name: f.name, size: f.size, mimetype: f.mimetype,
+app.get('/files', requireAuth, async (req, res) => {
+  try {
+    const username = req.user.username;
+
+    const ownFiles = await File.find({ owner: username })
+      .select('fileId name size mimetype uploadedAt sharedWith')
+      .lean();
+
+    const sharedFiles = await File.find({ sharedWith: username })
+      .select('fileId name size mimetype uploadedAt owner')
+      .lean();
+
+    const owned = ownFiles.map(f => ({
+      id: f.fileId, name: f.name, size: f.size, mimetype: f.mimetype,
       uploadedAt: f.uploadedAt, sharedWith: f.sharedWith, owned: true
     }));
 
-  const sharedFiles = files
-    .filter(f => f.sharedWith && f.sharedWith.includes(username))
-    .map(f => ({
-      id: f.id, name: f.name, size: f.size, mimetype: f.mimetype,
+    const shared = sharedFiles.map(f => ({
+      id: f.fileId, name: f.name, size: f.size, mimetype: f.mimetype,
       uploadedAt: f.uploadedAt, owner: f.owner, owned: false
     }));
 
-  res.json({ owned: ownFiles, shared: sharedFiles });
+    res.json({ owned, shared });
+  } catch (err) {
+    console.error('List files error:', err);
+    res.status(500).json({ error: 'Failed to load files' });
+  }
 });
 
 /* ───────── METADATA ───────── */
-app.get('/metadata/:id', requireAuth, (req, res) => {
-  const username = req.user.username;
-  const file = files.find(f =>
-    f.id === req.params.id &&
-    (f.owner === username || (f.sharedWith && f.sharedWith.includes(username)))
-  );
-  if (!file) return res.status(404).json({ error: 'File not found' });
+app.get('/metadata/:id', requireAuth, async (req, res) => {
+  try {
+    const username = req.user.username;
+    const file = await File.findOne({
+      fileId: req.params.id,
+      $or: [{ owner: username }, { sharedWith: username }]
+    }).select('-encryptedData -key -iv').lean();
 
-  res.json({
-    id:          file.id,
-    name:        file.name,
-    size:        file.size,
-    mimetype:    file.mimetype,
-    uploadedAt:  file.uploadedAt,
-    owner:       file.owner,
-    sharedWith:  file.sharedWith,
-    encryption:  'AES-256-CBC',
-    accessLog:   file.accessLog || []
-  });
+    if (!file) return res.status(404).json({ error: 'File not found' });
+
+    res.json({
+      id:          file.fileId,
+      name:        file.name,
+      size:        file.size,
+      mimetype:    file.mimetype,
+      uploadedAt:  file.uploadedAt,
+      owner:       file.owner,
+      sharedWith:  file.sharedWith,
+      encryption:  'AES-256-CBC',
+      accessLog:   file.accessLog || []
+    });
+  } catch (err) {
+    console.error('Metadata error:', err);
+    res.status(500).json({ error: 'Failed to load metadata' });
+  }
 });
 
 /* ───────── DOWNLOAD ───────── */
-app.get('/download/:id', requireAuth, (req, res) => {
-  const username = req.user.username;
-  const file = files.find(f =>
-    f.id === req.params.id &&
-    (f.owner === username || (f.sharedWith && f.sharedWith.includes(username)))
-  );
+app.get('/download/:id', requireAuth, async (req, res) => {
+  try {
+    const username = req.user.username;
+    const file = await File.findOne({
+      fileId: req.params.id,
+      $or: [{ owner: username }, { sharedWith: username }]
+    });
 
-  if (!file) return res.status(404).json({ error: 'File not found or access denied' });
+    if (!file) return res.status(404).json({ error: 'File not found or access denied' });
 
-  // Log access
-  file.accessLog = file.accessLog || [];
-  file.accessLog.push({ by: username, at: new Date().toISOString(), action: 'download' });
-  saveFiles();
+    // Log access
+    file.accessLog.push({ by: username, at: new Date().toISOString(), action: 'download' });
+    await file.save();
 
-  const key     = Buffer.from(file.key, 'hex');
-  const iv      = Buffer.from(file.iv, 'hex');
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    const key      = Buffer.from(file.key, 'hex');
+    const iv       = Buffer.from(file.iv, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 
-  const encData   = fs.readFileSync(file.path);
-  const decrypted = Buffer.concat([decipher.update(encData), decipher.final()]);
+    const decrypted = Buffer.concat([decipher.update(file.encryptedData), decipher.final()]);
 
-  res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
-  res.setHeader('Content-Type', file.mimetype || 'application/octet-stream');
-  res.send(decrypted);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+    res.setHeader('Content-Type', file.mimetype || 'application/octet-stream');
+    res.send(decrypted);
+  } catch (err) {
+    console.error('Download error:', err);
+    res.status(500).json({ error: 'Download failed' });
+  }
 });
 
 /* ───────── SHARE FILE ───────── */
-app.post('/share/:id', requireAuth, (req, res) => {
-  const username     = req.user.username;
-  const { shareWith } = req.body;
+app.post('/share/:id', requireAuth, async (req, res) => {
+  try {
+    const username      = req.user.username;
+    const { shareWith } = req.body;
 
-  if (!shareWith) return res.status(400).json({ error: 'Provide a username to share with' });
-  if (shareWith === username) return res.status(400).json({ error: 'Cannot share with yourself' });
+    if (!shareWith) return res.status(400).json({ error: 'Provide a username to share with' });
+    if (shareWith === username) return res.status(400).json({ error: 'Cannot share with yourself' });
 
-  const file = files.find(f => f.id === req.params.id && f.owner === username);
-  if (!file) return res.status(404).json({ error: 'File not found or not owned by you' });
+    const file = await File.findOne({ fileId: req.params.id, owner: username });
+    if (!file) return res.status(404).json({ error: 'File not found or not owned by you' });
 
-  const targetUser = users.find(u => u.username === shareWith);
-  if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
+    const targetUser = await User.findOne({ username: shareWith });
+    if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
 
-  if (!file.sharedWith.includes(shareWith)) {
-    file.sharedWith.push(shareWith);
-    file.accessLog = file.accessLog || [];
-    file.accessLog.push({ by: username, at: new Date().toISOString(), action: `shared with ${shareWith}` });
-    saveFiles();
+    if (!file.sharedWith.includes(shareWith)) {
+      file.sharedWith.push(shareWith);
+      file.accessLog.push({ by: username, at: new Date().toISOString(), action: `shared with ${shareWith}` });
+      await file.save();
+    }
+
+    res.json({ message: `File shared with ${shareWith}` });
+  } catch (err) {
+    console.error('Share error:', err);
+    res.status(500).json({ error: 'Share failed' });
   }
-
-  res.json({ message: `File shared with ${shareWith}` });
 });
 
 /* ───────── UNSHARE FILE ───────── */
-app.post('/unshare/:id', requireAuth, (req, res) => {
-  const username     = req.user.username;
-  const { unshareWith } = req.body;
+app.post('/unshare/:id', requireAuth, async (req, res) => {
+  try {
+    const username        = req.user.username;
+    const { unshareWith } = req.body;
 
-  const file = files.find(f => f.id === req.params.id && f.owner === username);
-  if (!file) return res.status(404).json({ error: 'File not found or not owned by you' });
+    const file = await File.findOne({ fileId: req.params.id, owner: username });
+    if (!file) return res.status(404).json({ error: 'File not found or not owned by you' });
 
-  file.sharedWith = file.sharedWith.filter(u => u !== unshareWith);
-  saveFiles();
-  res.json({ message: `File access revoked for ${unshareWith}` });
+    file.sharedWith = file.sharedWith.filter(u => u !== unshareWith);
+    await file.save();
+    res.json({ message: `File access revoked for ${unshareWith}` });
+  } catch (err) {
+    console.error('Unshare error:', err);
+    res.status(500).json({ error: 'Unshare failed' });
+  }
 });
 
 /* ───────── DELETE ───────── */
-app.delete('/delete/:id', requireAuth, (req, res) => {
-  const username = req.user.username;
-  const index    = files.findIndex(f => f.id === req.params.id && f.owner === username);
+app.delete('/delete/:id', requireAuth, async (req, res) => {
+  try {
+    const username = req.user.username;
+    const result = await File.findOneAndDelete({ fileId: req.params.id, owner: username });
 
-  if (index === -1) return res.status(404).json({ error: 'File not found or not owned by you' });
+    if (!result) return res.status(404).json({ error: 'File not found or not owned by you' });
 
-  const file = files[index];
-  if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-
-  files.splice(index, 1);
-  saveFiles();
-  res.json({ message: 'File deleted' });
+    res.json({ message: 'File deleted' });
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ error: 'Delete failed' });
+  }
 });
 
 /* ───────── SECURITY LOG ───────── */
-app.get('/security-log', requireAuth, (req, res) => {
-  res.json(getThreats(req.user.username));
+app.get('/security-log', requireAuth, async (req, res) => {
+  try {
+    const threats = await getThreats(req.user.username);
+    res.json(threats);
+  } catch (err) {
+    console.error('Security log error:', err);
+    res.status(500).json({ error: 'Failed to load security log' });
+  }
 });
 
 /* ───────── USER SEARCH (for sharing) ───────── */
-app.get('/users/search', requireAuth, (req, res) => {
-  const q = (req.query.q || '').toLowerCase();
-  if (q.length < 2) return res.json([]);
-  const me = req.user.username;
-  const results = users
-    .filter(u => u.username !== me && u.username.toLowerCase().includes(q))
-    .map(u => ({ username: u.username }))
-    .slice(0, 10);
-  res.json(results);
+app.get('/users/search', requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toLowerCase();
+    if (q.length < 2) return res.json([]);
+    const me = req.user.username;
+    const results = await User.find({
+      username: { $regex: q, $options: 'i', $ne: me }
+    })
+      .select('username')
+      .limit(10)
+      .lean();
+
+    res.json(results.filter(u => u.username !== me).map(u => ({ username: u.username })));
+  } catch (err) {
+    console.error('User search error:', err);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+/* ───────── CATCH-ALL: serve index.html for SPA routes ───────── */
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
 /* ───────── START ───────── */
-app.listen(3000, () => {
-  console.log('🔐 Secure File System running → http://localhost:3000');
+app.listen(PORT, () => {
+  console.log(`🔐 Secure File System running → port ${PORT}`);
   console.log('🛡️  Security modules: JWT auth, 2FA, malware scan, overflow detection');
+  console.log('🌍 Database: MongoDB Atlas');
 });

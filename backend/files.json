@@ -12,5 +12,25 @@
     "uploadedAt": "2026-04-05T06:22:24.096Z",
     "sharedWith": [],
     "accessLog": []
+  },
+  {
+    "id": "18061d65df2329b9",
+    "owner": "ps956984mishr@gmail.com",
+    "name": "unit2.ppt",
+    "encName": "17446cb68b49a3f829de8b779ace0f3a.enc",
+    "path": "C:\\Users\\ASUS\\OneDrive\\Desktop\\secure-file-system\\backend\\uploads\\17446cb68b49a3f829de8b779ace0f3a.enc",
+    "key": "2a4da247610aa6f91a801f942726faadb12626db60d7fb6e692da45b0b9ba03e",
+    "iv": "56d56c1b2079ed17be6faa85bdbe8ddc",
+    "size": 3915776,
+    "mimetype": "application/vnd.ms-powerpoint",
+    "uploadedAt": "2026-04-05T15:56:42.434Z",
+    "sharedWith": [],
+    "accessLog": [
+      {
+        "by": "ps956984mishr@gmail.com",
+        "at": "2026-04-05T15:57:02.317Z",
+        "action": "download"
+      }
+    ]
   }
 ]

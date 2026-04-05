@@ -790,6 +790,9 @@
     }
 
     // ── LOGIN ───────────────────────────────────────
+    // ── DYNAMIC API BASE (works on localhost AND deployed URL) ──
+    const API_BASE = window.location.origin;
+
     async function login() {
       const username = document.getElementById('loginUser').value.trim();
       const password = document.getElementById('loginPass').value.trim();
@@ -800,7 +803,7 @@
       clearAlert();
 
       try {
-        const res = await fetch('http://localhost:3000/login', {
+        const res = await fetch(API_BASE + '/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -839,7 +842,7 @@
       clearAlert();
 
       try {
-        const res = await fetch('http://localhost:3000/signup', {
+        const res = await fetch(API_BASE + '/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -879,7 +882,7 @@
       clearAlert();
 
       try {
-        const res = await fetch('http://localhost:3000/2fa/verify', {
+        const res = await fetch(API_BASE + '/2fa/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: code, partialToken })

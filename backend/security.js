@@ -1,12 +1,10 @@
 /**
  * security.js — Threat Detection & Logging Module
  * Handles: malware detection, buffer overflow detection, threat event logging
+ * Now uses MongoDB via Mongoose instead of local JSON files.
  */
 
-const fs   = require('fs');
-const path = require('path');
-
-const THREATS_FILE = path.join(__dirname, 'threats.json');
+const Threat = require('./models/Threat');
 
 // ── DANGEROUS FILE EXTENSIONS (malware / executable) ──────────────────────
 const MALWARE_EXTENSIONS = new Set([
@@ -109,7 +107,7 @@ function detectBufferOverflow(req) {
 
   // 4. Suspicious repeated patterns in body fields (basic pattern)
   const bodyStr = JSON.stringify(req.body || {});
-  if (/(.)\1{100,}/.test(bodyStr)) {
+  if (/(.)\\1{100,}/.test(bodyStr)) {
     return {
       safe: false,
       reason: 'Repeated character pattern detected (possible overflow attempt)'
@@ -120,43 +118,31 @@ function detectBufferOverflow(req) {
 }
 
 /**
- * loadThreats() / saveThreats() — persistence helpers
- */
-function loadThreats() {
-  if (fs.existsSync(THREATS_FILE)) {
-    try { return JSON.parse(fs.readFileSync(THREATS_FILE, 'utf8')); } catch { return []; }
-  }
-  return [];
-}
-
-function saveThreats(threats) {
-  fs.writeFileSync(THREATS_FILE, JSON.stringify(threats, null, 2));
-}
-
-/**
  * logThreat(username, type, detail, ip)
- * Appends a threat event to the threats log
+ * Saves a threat event to MongoDB
  */
-function logThreat(username, type, detail, ip = 'unknown') {
-  const threats = loadThreats();
-  threats.unshift({
-    id:        Date.now(),
-    timestamp: new Date().toISOString(),
-    username,
-    type,      // 'MALWARE' | 'BUFFER_OVERFLOW' | 'BRUTE_FORCE' | 'UNAUTHORIZED'
-    detail,
-    ip
-  });
-  // Keep only last 500 entries
-  saveThreats(threats.slice(0, 500));
+async function logThreat(username, type, detail, ip = 'unknown') {
+  try {
+    await Threat.create({ username, type, detail, ip });
+  } catch (err) {
+    console.error('Failed to log threat:', err.message);
+  }
 }
 
 /**
  * getThreats(username)
- * Returns threats for a specific user (or all if admin)
+ * Returns threats for a specific user, latest first
  */
-function getThreats(username) {
-  return loadThreats().filter(t => t.username === username);
+async function getThreats(username) {
+  try {
+    return await Threat.find({ username })
+      .sort({ timestamp: -1 })
+      .limit(200)
+      .lean();
+  } catch (err) {
+    console.error('Failed to get threats:', err.message);
+    return [];
+  }
 }
 
 module.exports = { detectMalware, detectBufferOverflow, logThreat, getThreats };

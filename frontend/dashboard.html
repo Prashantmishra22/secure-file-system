@@ -401,7 +401,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const BASE   = 'http://localhost:3000';
+const BASE   = window.location.origin;
 const token  = sessionStorage.getItem('token');
 const currentUser = sessionStorage.getItem('user');
 
