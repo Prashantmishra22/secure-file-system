@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express     = require('express');
 const multer      = require('multer');
 const bcrypt      = require('bcrypt');
@@ -986,6 +987,42 @@ app.get('/users/search', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('User search error:', err);
     res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   COMPLAINT EMAIL
+   ═══════════════════════════════════════════════ */
+
+const nodemailer = require('nodemailer');
+
+app.post('/api/complaint', async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'Message is required' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: 'pm9569mishraji@gmail.com',
+      subject: 'New Complaint from Website',
+      text: message.trim()
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Complaint email error:', err.message);
+    res.json({ success: false });
   }
 });
 
