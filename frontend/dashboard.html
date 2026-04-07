@@ -54,7 +54,7 @@
       </div>
     </div>
     <div class="sidebar-bottom">
-      <button class="btn-logout" onclick="logout()">Sign out</button>
+      <button type="button" class="btn-logout" onclick="logout()">Sign out</button>
     </div>
   </aside>
 
@@ -74,7 +74,7 @@
         <div class="upload-controls" onclick="event.stopPropagation()">
           <input type="file" id="fileInput" onchange="onFileChosen(this)">
           <span class="file-chosen" id="fileChosen">No file chosen</span>
-          <button class="btn btn-primary" id="uploadBtn" onclick="uploadFile()" disabled>Upload</button>
+          <button type="button" class="btn btn-primary" id="uploadBtn" onclick="event.preventDefault(); event.stopPropagation(); uploadFile();" disabled>Upload</button>
         </div>
       </div>
       <div class="upload-progress" id="uploadProgress"><div class="progress-bar"><div class="progress-fill"></div></div></div>
@@ -113,21 +113,21 @@
       <div class="page-title">Encrypted <span>Notes</span></div>
       <div class="page-sub">AES-256 encrypted notepad · stored securely in the cloud</div>
       <div style="display:flex;gap:12px;margin-bottom:24px">
-        <button class="btn btn-primary" onclick="newNote()">+ New Note</button>
+        <button type="button" class="btn btn-primary" onclick="newNote()">+ New Note</button>
       </div>
       <div class="notes-grid" id="notesGrid"></div>
       <div class="empty-state" id="notesEmpty" style="display:none"><p>No notes yet. Create one above.</p></div>
       <!-- Note Editor -->
       <div id="noteEditor" style="display:none">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <button class="btn btn-outline" onclick="closeNoteEditor()">← Back</button>
+          <button type="button" class="btn btn-outline" onclick="closeNoteEditor()">← Back</button>
           <div class="status-pill on" style="font-size:10px">🔒 AES-256 ENCRYPTED</div>
         </div>
         <div class="field"><label>Title</label><input id="noteTitle" type="text" placeholder="Note title..." maxlength="200"></div>
         <div class="field"><label>Content</label><textarea id="noteContent" style="width:100%;min-height:300px;padding:16px;background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;resize:vertical;outline:none" placeholder="Write your encrypted note..."></textarea></div>
         <div style="display:flex;gap:10px;margin-top:12px">
-          <button class="btn btn-primary" onclick="saveNote()">Save Note</button>
-          <button class="btn btn-danger" id="deleteNoteBtn" onclick="deleteCurrentNote()" style="display:none">Delete</button>
+          <button type="button" class="btn btn-primary" onclick="saveNote()">Save Note</button>
+          <button type="button" class="btn btn-danger" id="deleteNoteBtn" onclick="deleteCurrentNote()" style="display:none">Delete</button>
         </div>
       </div>
     </div>
@@ -144,7 +144,7 @@
     <div class="page" id="page-sessions">
       <div class="page-title">Active <span>Sessions</span></div>
       <div class="page-sub">Manage your login sessions across devices</div>
-      <div style="margin-bottom:20px"><button class="btn btn-danger" onclick="revokeAllSessions()">Revoke All Other Sessions</button></div>
+      <div style="margin-bottom:20px"><button type="button" class="btn btn-danger" onclick="revokeAllSessions()">Revoke All Other Sessions</button></div>
       <div class="session-list" id="sessionList"></div>
     </div>
 
@@ -162,14 +162,14 @@
           <div class="secret-box" id="secretBox">—</div>
           <p style="font-size:13px;color:var(--accent);margin-bottom:12px">2. Enter the 6-digit code from your app to confirm:</p>
           <div class="field"><label>Verification Code</label><input id="twofaOTP" type="text" inputmode="numeric" maxlength="6" placeholder="000000"></div>
-          <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="enable2FA()">Enable 2FA</button><button class="btn btn-outline" onclick="cancelSetup()">Cancel</button></div>
+          <div style="display:flex;gap:10px"><button type="button" class="btn btn-primary" onclick="enable2FA()">Enable 2FA</button><button type="button" class="btn btn-outline" onclick="cancelSetup()">Cancel</button></div>
         </div>
         <div id="twofaEnabled" style="display:none">
           <p style="color:var(--muted);font-size:13px;margin-bottom:16px">2FA is active. To disable, confirm your password.</p>
           <div class="field"><label>Current Password</label><input id="twofaDisablePass" type="password" placeholder="••••••••"></div>
-          <button class="btn btn-danger" onclick="disable2FA()">Disable 2FA</button>
+          <button type="button" class="btn btn-danger" onclick="disable2FA()">Disable 2FA</button>
         </div>
-        <div id="twofaDisabled"><button class="btn btn-primary" onclick="setup2FA()">Set Up 2FA</button></div>
+        <div id="twofaDisabled"><button type="button" class="btn btn-primary" onclick="setup2FA()">Set Up 2FA</button></div>
       </div>
     </div>
 
@@ -183,7 +183,7 @@
         <div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="Min 8 characters"></div>
         <div class="field"><label>Confirm New Password</label><input id="confirmPass" type="password" placeholder="••••••••"></div>
         <div class="pw-strength" id="pwStrength"></div>
-        <button class="btn btn-primary" onclick="changePassword()" style="margin-top:12px">Update Password</button>
+        <button type="button" class="btn btn-primary" onclick="changePassword()" style="margin-top:12px">Update Password</button>
       </div>
     </div>
 
@@ -202,15 +202,15 @@
 </div>
 
 <!-- MODALS -->
-<div class="modal-backdrop" id="deleteModal"><div class="modal"><h3>Delete file?</h3><p>This is permanent. The encrypted file and all versions will be removed.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button><button class="btn-confirm-del" onclick="confirmDelete()">Delete</button></div></div></div>
+<div class="modal-backdrop" id="deleteModal"><div class="modal"><h3>Delete file?</h3><p>This is permanent. The encrypted file and all versions will be removed.</p><div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button><button type="button" class="btn-confirm-del" onclick="confirmDelete()">Delete</button></div></div></div>
 
-<div class="modal-backdrop" id="shareModal"><div class="modal"><h3>Share File</h3><p>Share this file with another registered user.</p><div class="field"><label>Search Username</label><input id="shareSearch" type="text" placeholder="Type a username..." oninput="searchUsers()"></div><div class="user-results" id="userResults"></div><div id="currentlyShared" style="margin-top:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('shareModal')">Close</button></div></div></div>
+<div class="modal-backdrop" id="shareModal"><div class="modal"><h3>Share File</h3><p>Share this file with another registered user.</p><div class="field"><label>Search Username</label><input id="shareSearch" type="text" placeholder="Type a username..." oninput="searchUsers()"></div><div class="user-results" id="userResults"></div><div id="currentlyShared" style="margin-top:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px"></div><div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal('shareModal')">Close</button></div></div></div>
 
-<div class="modal-backdrop" id="metaModal"><div class="modal"><h3 id="metaTitle">File Details</h3><p style="margin-bottom:16px">Encryption and access metadata</p><table class="meta-table" id="metaTable"></table><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('metaModal')">Close</button></div></div></div>
+<div class="modal-backdrop" id="metaModal"><div class="modal"><h3 id="metaTitle">File Details</h3><p style="margin-bottom:16px">Encryption and access metadata</p><table class="meta-table" id="metaTable"></table><div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal('metaModal')">Close</button></div></div></div>
 
-<div class="modal-backdrop" id="versionModal"><div class="modal"><h3 id="versionTitle">Version History</h3><p style="margin-bottom:16px">Previous versions of this file</p><div id="versionList" class="file-list"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('versionModal')">Close</button></div></div></div>
+<div class="modal-backdrop" id="versionModal"><div class="modal"><h3 id="versionTitle">Version History</h3><p style="margin-bottom:16px">Previous versions of this file</p><div id="versionList" class="file-list"></div><div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal('versionModal')">Close</button></div></div></div>
 
-<div class="modal-backdrop" id="previewModal"><div class="modal" style="width:700px;max-height:85vh;overflow:auto"><h3 id="previewTitle">Preview</h3><div id="previewContent" style="margin-top:16px"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('previewModal')">Close</button></div></div></div>
+<div class="modal-backdrop" id="previewModal"><div class="modal" style="width:700px;max-height:85vh;overflow:auto"><h3 id="previewTitle">Preview</h3><div id="previewContent" style="margin-top:16px"></div><div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal('previewModal')">Close</button></div></div></div>
 
 <div class="toast" id="toast"></div>
 

@@ -19,6 +19,11 @@ const Activity = require('./models/Activity');
 const Note     = require('./models/Note');
 const Session  = require('./models/Session');
 
+const ReportSchema = new mongoose.Schema({
+  message: String,
+});
+const Report = mongoose.model("Report", ReportSchema);
+
 const app = express();
 
 /* ───────── ENVIRONMENT ───────── */
@@ -119,6 +124,20 @@ async function logActivity(username, event, detail = '', ip = 'unknown') {
     console.error('Activity log error:', err.message);
   }
 }
+
+app.post("/report", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ success: false });
+    }
+    await Report.create({ message });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Report error:', err);
+    res.status(500).json({ success: false });
+  }
+});
 
 /* ───────── HEALTH CHECK ───────── */
 app.get('/api/health', (req, res) => {

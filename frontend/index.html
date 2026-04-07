@@ -645,8 +645,8 @@
       </div>
 
       <div class="tabs">
-        <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
-        <button class="tab" id="tabSignup" onclick="switchTab('signup')">Sign up</button>
+        <button type="button" class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+        <button type="button" class="tab" id="tabSignup" onclick="switchTab('signup')">Sign up</button>
       </div>
 
       <div class="alert" id="alertBox"></div>
@@ -662,7 +662,7 @@
           <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"
             onkeydown="if(event.key==='Enter') login()">
         </div>
-        <button class="btn btn-primary" id="loginBtn" onclick="login()">Login</button>
+        <button type="button" class="btn btn-primary" id="loginBtn" onclick="login()">Login</button>
       </div>
 
       <!-- SIGNUP PANEL -->
@@ -680,7 +680,7 @@
             <div class="pw-label" id="pwLabel">Enter a password</div>
           </div>
         </div>
-        <button class="btn btn-primary" id="signupBtn" onclick="signup()">Create Account</button>
+        <button type="button" class="btn btn-primary" id="signupBtn" onclick="signup()">Create Account</button>
       </div>
 
       <!-- 2FA PANEL -->
@@ -690,8 +690,8 @@
         <div class="twofa-sub">Open your authenticator app and enter the 6-digit code for <strong>SecureFS</strong>.</div>
         <input id="otpInput" class="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
           onkeydown="if(event.key==='Enter') verify2FA()">
-        <button class="btn btn-primary" onclick="verify2FA()">Verify Code</button>
-        <button class="btn btn-secondary" onclick="cancelTwoFA()">← Back to Login</button>
+        <button type="button" class="btn btn-primary" onclick="verify2FA()">Verify Code</button>
+        <button type="button" class="btn btn-secondary" onclick="cancelTwoFA()">← Back to Login</button>
       </div>
     </div>
   </div>
@@ -798,9 +798,9 @@
         <h2>Help & <span class="gradient-text">Support</span></h2>
         <p>Experiencing an issue? Let us know and we'll get back to you.</p>
         <div class="help-card">
-          <textarea id="complaintText" placeholder="Describe your issue in detail..." rows="5"></textarea>
-          <button class="btn btn-primary" style="width:200px;margin-top:16px"
-            onclick="submitComplaint()">Submit Report</button>
+          <textarea id="messageBox" placeholder="Describe your issue in detail..." rows="5"></textarea>
+          <button type="button" class="btn btn-primary" id="submitReport" style="width:200px;margin-top:16px"
+            onclick="event.preventDefault(); submitComplaint();">Submit Report</button>
         </div>
       </div>
     </div>
@@ -1006,28 +1006,39 @@
       }
     }
 
-    // ── COMPLAINT SUBMISSION ───────────────────────
     async function submitComplaint() {
-      const textarea = document.getElementById('complaintText');
-      const message = textarea.value.trim();
-      if (!message) return alert('Please describe your issue before submitting.');
+      const messageBox = document.getElementById('messageBox');
+      const message = messageBox.value.trim();
+      const submitBtn = document.getElementById('submitReport');
+
+      if (!message) {
+        alert('Please enter a message');
+        return;
+      }
 
       try {
-        const res = await fetch(API_BASE + '/api/complaint', {
+        submitBtn.disabled = true;
+
+        const res = await fetch(API_BASE + '/report', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
         });
+
         const data = await res.json();
 
         if (data.success) {
-          alert('Complaint submitted. We will get back to you.');
-          textarea.value = '';
+          alert('Message sent successfully ✅');
+          messageBox.value = '';
         } else {
-          alert('Failed to submit complaint. Please try again later.');
+          alert('Failed to send ❌');
         }
-      } catch {
-        alert('Cannot connect to server. Please try again later.');
+      } catch (err) {
+        alert('Server error ❌');
+      } finally {
+        submitBtn.disabled = false;
       }
     }
 

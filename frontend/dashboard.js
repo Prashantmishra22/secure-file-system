@@ -109,12 +109,12 @@ function renderFiles(files) {
         </div>
       </div>
       <div class="file-actions">
-        ${previewable ? `<button class="icon-btn btn-preview" onclick="previewFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
-        ${f.version > 1 ? `<button class="icon-btn btn-version" onclick="showVersions('${esc(f.name).replace(/'/g,"\\'")}')" title="Versions"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></button>` : ''}
-        <button class="icon-btn btn-info" onclick="viewMeta('${f.id}')" title="Metadata"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
-        <button class="icon-btn btn-share-f" onclick="openShare('${f.id}')" title="Share"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></button>
-        <button class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
-        <button class="icon-btn btn-delete" onclick="askDelete('${f.id}')" title="Delete"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+        ${previewable ? `<button type="button" class="icon-btn btn-preview" onclick="previewFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+        ${f.version > 1 ? `<button type="button" class="icon-btn btn-version" onclick="showVersions('${esc(f.name).replace(/'/g,"\\'")}')" title="Versions"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></button>` : ''}
+        <button type="button" class="icon-btn btn-info" onclick="viewMeta('${f.id}')" title="Metadata"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
+        <button type="button" class="icon-btn btn-share-f" onclick="openShare('${f.id}')" title="Share"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></button>
+        <button type="button" class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+        <button type="button" class="icon-btn btn-delete" onclick="askDelete('${f.id}')" title="Delete"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -132,9 +132,9 @@ function renderShared() {
       <div class="file-icon type-${type}">${ext}</div>
       <div class="file-meta"><div class="file-name">${name}</div><div class="file-tags"><span class="file-tag">From: ${esc(f.owner)}</span><span class="file-tag">${fmtSize(f.size)}</span></div></div>
       <div class="file-actions">
-        ${previewable ? `<button class="icon-btn btn-preview" onclick="previewFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
-        <button class="icon-btn btn-info" onclick="viewMeta('${f.id}')" title="Metadata"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
-        <button class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+        ${previewable ? `<button type="button" class="icon-btn btn-preview" onclick="previewFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+        <button type="button" class="icon-btn btn-info" onclick="viewMeta('${f.id}')" title="Metadata"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
+        <button type="button" class="icon-btn btn-download" onclick="downloadFile('${f.id}','${esc(f.name).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -301,8 +301,8 @@ async function showVersions(fileName) {
           <div class="file-tags"><span class="file-tag">${fmtSize(v.size)}</span><span class="file-tag">${fmtDate(v.uploadedAt)}</span></div>
         </div>
         <div class="file-actions">
-          <button class="icon-btn btn-download" onclick="downloadFile('${v.id}','${esc(fileName).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
-          ${!v.isLatest ? `<button class="btn btn-outline" style="font-size:11px;padding:6px 12px" onclick="restoreVersion('${v.id}')">Restore</button>` : ''}
+          <button type="button" class="icon-btn btn-download" onclick="downloadFile('${v.id}','${esc(fileName).replace(/'/g,"\\'")}')" title="Download"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+          ${!v.isLatest ? `<button type="button" class="btn btn-outline" style="font-size:11px;padding:6px 12px" onclick="restoreVersion('${v.id}')">Restore</button>` : ''}
         </div>
       </div>`).join('');
   } catch { showToast('Failed to load versions', 'error'); }
@@ -395,7 +395,7 @@ async function loadSessions() {
       return `<div class="session-card ${s.isCurrent?'current':''}">
         <div class="session-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
         <div class="session-meta"><div class="session-agent">${esc(browser)} ${s.isCurrent?'<span style="color:var(--accent);font-size:11px">(this session)</span>':''}</div><div class="session-info">IP: ${esc(s.ip)} · ${fmtDate(s.loginAt)}</div></div>
-        <div class="session-actions">${!s.isCurrent ? `<button class="btn btn-danger" style="font-size:11px;padding:8px 14px" onclick="revokeSession('${s.id}')">Revoke</button>` : ''}</div>
+        <div class="session-actions">${!s.isCurrent ? `<button type="button" class="btn btn-danger" style="font-size:11px;padding:8px 14px" onclick="revokeSession('${s.id}')">Revoke</button>` : ''}</div>
       </div>`;
     }).join('');
   } catch { list.innerHTML='<div style="color:var(--danger);padding:20px">Could not load sessions.</div>'; }
@@ -523,7 +523,7 @@ async function loadAdmin() {
       <div class="stat-card"><div class="stat-label">Total Files</div><div class="stat-val">${stats.totalFiles} <span>files</span></div></div>
       <div class="stat-card"><div class="stat-label">Security Threats</div><div class="stat-val">${stats.totalThreats} <span>events</span></div></div>
       <div class="stat-card"><div class="stat-label">Storage</div><div class="stat-val">${(stats.totalStorage/(1024*1024)).toFixed(2)} <span>MB</span></div></div>`;
-    document.getElementById('adminUserList').innerHTML = users.map(u => `<div class="admin-user-card"><div class="file-icon type-file" style="font-size:14px;font-weight:800">${esc(u.username[0].toUpperCase())}</div><div class="user-info"><div class="file-name">${esc(u.username)}</div><div class="file-tags"><span class="file-tag">${u.role}</span><span class="file-tag">${u.twoFactorEnabled?'2FA ON':'2FA OFF'}</span><span class="file-tag">Joined: ${fmtDate(u.createdAt)}</span></div></div>${u.username !== currentUser ? `<button class="btn btn-danger" style="font-size:11px;padding:8px 14px" onclick="deleteUser('${esc(u.username)}')">Delete</button>` : '<span style="color:var(--accent);font-family:Space Mono,monospace;font-size:10px">YOU</span>'}</div>`).join('');
+    document.getElementById('adminUserList').innerHTML = users.map(u => `<div class="admin-user-card"><div class="file-icon type-file" style="font-size:14px;font-weight:800">${esc(u.username[0].toUpperCase())}</div><div class="user-info"><div class="file-name">${esc(u.username)}</div><div class="file-tags"><span class="file-tag">${u.role}</span><span class="file-tag">${u.twoFactorEnabled?'2FA ON':'2FA OFF'}</span><span class="file-tag">Joined: ${fmtDate(u.createdAt)}</span></div></div>${u.username !== currentUser ? `<button type="button" class="btn btn-danger" style="font-size:11px;padding:8px 14px" onclick="deleteUser('${esc(u.username)}')">Delete</button>` : '<span style="color:var(--accent);font-family:Space Mono,monospace;font-size:10px">YOU</span>'}</div>`).join('');
     document.getElementById('adminThreatList').innerHTML = threats.length ? threats.map(t => `<div class="threat-card"><span class="threat-badge badge-${t.type}">${t.type.replace('_',' ')}</span><div class="threat-detail"><div class="threat-msg">${esc(t.detail)}</div><div class="threat-meta">User: ${esc(t.username)} · IP: ${esc(t.ip)}</div></div><div class="threat-time">${fmtDate(t.timestamp)}</div></div>`).join('') : '<div style="color:var(--muted);padding:20px;text-align:center">No threats</div>';
   } catch { showToast('Failed to load admin data', 'error'); }
 }
