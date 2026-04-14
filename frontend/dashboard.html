@@ -69,15 +69,13 @@
         <div class="stat-card"><div class="stat-label">Encryption</div><div class="stat-val" style="font-size:18px">AES-256 <span>active</span></div></div>
       </div>
       <div class="upload-zone" id="uploadZone">
-        <div class="upload-clickable-area" style="cursor: pointer; padding: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; border-bottom: 1px solid rgba(0, 255, 140, 0.1);">
-          <div class="upload-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
-          <div class="upload-info"><strong>Drop file here or click to browse</strong><p>Max 5 MB · Malware scanned · AES-256 encrypted</p></div>
-        </div>
-        <div class="upload-controls" style="cursor: default; background: rgba(0, 0, 0, 0.3); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 var(--radius) var(--radius);">
-          <input type="file" id="fileInput" onchange="onFileChosen(this)" style="display:none">
-          <span class="file-chosen" id="fileChosen" style="font-size: 14px; color: var(--muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 60%;">No file chosen</span>
-         <button type="button" class="btn btn-primary" id="uploadBtn" onclick="uploadFile(event)" disabled style="width: auto; padding: 10px 20px; font-size: 14px; margin: 0; min-width: 120px;">Upload</button>
-        </div>
+        <div class="upload-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+        <div class="upload-info"><strong>Drop file here or click to browse</strong><p>Max 5 MB · Malware scanned · AES-256 encrypted</p></div>
+      </div>
+      <div style="background: rgba(0, 0, 0, 0.3); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 var(--radius) var(--radius); border: 1px solid rgba(0,255,140,0.15); border-top: none; margin-top: -1px;">
+        <input type="file" id="fileInput" onchange="onFileChosen(this)" style="display:none">
+        <span id="fileChosen" style="font-size: 14px; color: var(--muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 60%;">No file chosen</span>
+        <button type="button" class="btn btn-primary" id="uploadBtn" onclick="uploadFile(event)" disabled style="width: auto; padding: 10px 20px; font-size: 14px; margin: 0; min-width: 120px;">Upload</button>
       </div>
       <div class="upload-progress" id="uploadProgress"><div class="progress-bar"><div class="progress-fill"></div></div></div>
       <div class="toolbar">

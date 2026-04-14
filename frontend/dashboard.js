@@ -167,10 +167,7 @@ zone.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) { const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); fi.files = dt.files; onFileChosen(fi); }
 });
 async function uploadFile(event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation(); // Prevent click from bubbling up to uploadZone listener
-  }
+  if (event) event.preventDefault();
   const fi = document.getElementById('fileInput');
   if (!fi.files || !fi.files.length) {
     return showToast("Please select file", "error");
@@ -566,9 +563,7 @@ function logout() { sessionStorage.clear(); window.location = 'index.html'; }
 // ── INIT ──
 loadFiles();
 
-// Open file picker when clicking the upload zone, but NOT when clicking the controls row (Upload button, file name)
-document.getElementById("uploadZone").addEventListener("click", (e) => {
-  // If the click came from inside the controls area (Upload button / file label), do nothing
-  if (e.target.closest(".upload-controls")) return;
+// Upload zone click → open file picker (Upload button is outside this div, so no bubbling)
+document.getElementById("uploadZone").addEventListener("click", () => {
   document.getElementById("fileInput").click();
 });
