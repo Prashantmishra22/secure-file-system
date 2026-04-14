@@ -798,6 +798,9 @@
         <h2>Help & <span class="gradient-text">Support</span></h2>
         <p>Experiencing an issue? Let us know and we'll get back to you.</p>
         <div class="help-card">
+          <div class="input-wrap">
+            <input type="email" id="complaintEmail" placeholder="Your email address" style="width:100%;margin-bottom:12px;background:rgba(0, 0, 0, 0.35);border:1px solid rgba(255, 255, 255, 0.08);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;padding:14px 16px;transition:all 0.25s;" onfocus="this.style.borderColor='rgba(0, 255, 140, 0.4)';this.style.boxShadow='0 0 0 3px rgba(0, 255, 140, 0.08)';" onblur="this.style.borderColor='rgba(255, 255, 255, 0.08)';this.style.boxShadow='none';">
+          </div>
           <textarea id="messageBox" placeholder="Describe your issue in detail..." rows="5"></textarea>
           <button type="button" class="btn btn-primary" id="submitReport" style="width:200px;margin-top:16px"
             onclick="event.preventDefault(); submitComplaint();">Submit Report</button>
@@ -1007,12 +1010,14 @@
     }
 
     async function submitComplaint() {
+      const emailBox = document.getElementById('complaintEmail');
       const messageBox = document.getElementById('messageBox');
+      const email = emailBox.value.trim();
       const message = messageBox.value.trim();
       const submitBtn = document.getElementById('submitReport');
 
-      if (!message) {
-        alert('Please enter a message');
+      if (!email || !message) {
+        showAlert('Please enter both your email and a message');
         return;
       }
 
@@ -1024,19 +1029,20 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message, email }),
         });
 
         const data = await res.json();
 
         if (data.success) {
-          alert('Message sent successfully ✅');
+          showAlert('Message sent successfully ✅', 'success');
           messageBox.value = '';
+          emailBox.value = '';
         } else {
-          alert('Failed to send ❌');
+          showAlert('Failed to send ❌: ' + (data.error || 'Unknown error'), 'error');
         }
       } catch (err) {
-        alert('Server error ❌');
+        showAlert('Server error ❌', 'error');
       } finally {
         submitBtn.disabled = false;
       }

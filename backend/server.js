@@ -11,6 +11,8 @@ const QRCode      = require('qrcode');
 const rateLimit   = require('express-rate-limit');
 const helmet      = require('helmet');
 const mongoose    = require('mongoose');
+const nodemailer  = require('nodemailer');
+const fs          = require('fs');
 
 const { detectMalware, detectBufferOverflow, logThreat, getThreats } = require('./security');
 const User     = require('./models/User');
@@ -21,8 +23,33 @@ const Session  = require('./models/Session');
 
 const ReportSchema = new mongoose.Schema({
   message: String,
+  email: String,
+  timestamp: Date
 });
 const Report = mongoose.model("Report", ReportSchema);
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Verify Nodemailer initially
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Nodemailer configuration error:', error);
+    } else {
+      console.log('✅ Nodemailer SMTP is ready to send emails');
+    }
+  });
+} else {
+  console.warn('⚠️ EMAIL_USER or EMAIL_PASS is missing in environment variables. Email functionality will be disabled.');
+}
 
 const app = express();
 
@@ -55,7 +82,12 @@ connectDB().catch(err => {
 /* ───────── SECURITY HEADERS ───────── */
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
-app.use(cors({ origin: '*', exposedHeaders: ['Authorization'] }));
+app.use(cors({ 
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'] 
+}));
 
 // Trust proxy for correct IP detection behind Render/Railway
 app.set('trust proxy', 1);
@@ -127,15 +159,48 @@ async function logActivity(username, event, detail = '', ip = 'unknown') {
 
 app.post("/report", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, email } = req.body;
     if (!message) {
-      return res.status(400).json({ success: false });
+      return res.status(400).json({ success: false, error: 'Message is required' });
     }
-    await Report.create({ message });
-    res.json({ success: true });
+
+    const timestamp = new Date();
+    
+    // Backup to MongoDB
+    await Report.create({ message, email, timestamp });
+
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('❌ Missing EMAIL_USER or EMAIL_PASS environment variables!');
+      return res.status(500).json({ success: false, error: 'Email configuration missing (EMAIL_USER/EMAIL_PASS not set)' });
+    }
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: 'pm9569mishraji@gmail.com',
+      replyTo: email || process.env.EMAIL_USER,
+      subject: 'New Complaint from Website',
+      text: `User Message:\n${message}\n\nFrom: ${email || 'Anonymous'}`,
+      html: `
+        <h2>New Complaint from Website</h2>
+        <p><strong>User Email:</strong> ${email || 'Not provided'}</p>
+        <hr>
+        <p><strong>Message:</strong></p>
+        <p style="white-space: pre-wrap;">${message}</p>
+      `
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✅ Support email sent successfully for request from ${email}. Message ID: ${info.messageId}`);
+      res.json({ success: true });
+    } catch (mailErr) {
+      console.error('❌ Failed to send support email:', mailErr);
+      res.status(500).json({ success: false, error: 'Failed to send email. Ensure Gmail App Password is correct.' });
+    }
+
   } catch (err) {
     console.error('Report error:', err);
-    res.status(500).json({ success: false });
+    res.status(500).json({ success: false, error: 'Server error parsing report request' });
   }
 });
 
@@ -394,6 +459,13 @@ app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), async (re
       return res.status(400).json({ error: `Security threat detected: ${scan.reason}` });
     }
 
+    // Save file inside /backend/uploads
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(uploadDir, file.originalname), file.buffer);
+
     // Encrypt file buffer (AES-256-CBC)
     const key    = crypto.randomBytes(32);
     const iv     = crypto.randomBytes(16);
@@ -440,7 +512,7 @@ app.post('/upload', requireAuth, uploadLimiter, upload.single('file'), async (re
     }
 
     await logActivity(username, 'UPLOAD', `Uploaded ${file.originalname}`, req.ip);
-    res.json({ message: 'File encrypted & uploaded successfully' });
+    res.json({ success: true, message: 'File encrypted & uploaded successfully' });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Upload failed' });
@@ -1013,8 +1085,7 @@ app.get('/users/search', requireAuth, async (req, res) => {
    COMPLAINT EMAIL
    ═══════════════════════════════════════════════ */
 
-const nodemailer = require('nodemailer');
-
+// Removed duplicate nodemailer declaration
 app.post('/api/complaint', async (req, res) => {
   try {
     const { message } = req.body;
