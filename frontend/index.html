@@ -798,6 +798,7 @@
         <h2>Help & <span class="gradient-text">Support</span></h2>
         <p>Experiencing an issue? Let us know and we'll get back to you.</p>
         <div class="help-card">
+          <div id="supportStatus" style="display:none;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:14px;"></div>
           <div class="input-wrap">
             <input type="email" id="complaintEmail" placeholder="Your email address" style="width:100%;margin-bottom:12px;background:rgba(0, 0, 0, 0.35);border:1px solid rgba(255, 255, 255, 0.08);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;padding:14px 16px;transition:all 0.25s;" onfocus="this.style.borderColor='rgba(0, 255, 140, 0.4)';this.style.boxShadow='0 0 0 3px rgba(0, 255, 140, 0.08)';" onblur="this.style.borderColor='rgba(255, 255, 255, 0.08)';this.style.boxShadow='none';">
           </div>
@@ -1015,36 +1016,54 @@
       const email = emailBox.value.trim();
       const message = messageBox.value.trim();
       const submitBtn = document.getElementById('submitReport');
+      const statusDiv = document.getElementById('supportStatus');
+
+      // Helper to show status near the form
+      function showStatus(msg, type) {
+        statusDiv.textContent = msg;
+        statusDiv.style.display = 'block';
+        if (type === 'success') {
+          statusDiv.style.background = 'rgba(0,255,140,0.08)';
+          statusDiv.style.border = '1px solid rgba(0,255,140,0.25)';
+          statusDiv.style.color = '#00ff8c';
+        } else {
+          statusDiv.style.background = 'rgba(255,77,106,0.08)';
+          statusDiv.style.border = '1px solid rgba(255,77,106,0.25)';
+          statusDiv.style.color = '#ff4d6a';
+        }
+      }
 
       if (!email || !message) {
-        showAlert('Please enter both your email and a message');
+        showStatus('Please enter both your email and a message.', 'error');
         return;
       }
 
       try {
         submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        statusDiv.style.display = 'none';
 
         const res = await fetch(API_BASE + '/report', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message, email }),
         });
 
         const data = await res.json();
 
-        if (data.success) {
-          showAlert('Message sent successfully ✅', 'success');
-          messageBox.value = '';
+        if (res.ok && data.success) {
+          showStatus('✅ Report sent! We will get back to you shortly.', 'success');
+          // Reset form fields
           emailBox.value = '';
+          messageBox.value = '';
         } else {
-          showAlert('Failed to send ❌: ' + (data.error || 'Unknown error'), 'error');
+          showStatus('❌ Failed to send: ' + (data.error || 'Unknown error'), 'error');
         }
       } catch (err) {
-        showAlert('Server error ❌', 'error');
+        showStatus('❌ Server error. Please try again later.', 'error');
       } finally {
         submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Report';
       }
     }
 

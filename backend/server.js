@@ -29,13 +29,11 @@ const ReportSchema = new mongoose.Schema({
 const Report = mongoose.model("Report", ReportSchema);
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 // Verify Nodemailer initially
@@ -75,8 +73,8 @@ async function connectDB() {
 }
 
 connectDB().catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  process.exit(1);
+  console.error('⚠️  MongoDB unavailable:', err.message);
+  console.warn('⚠️  Running WITHOUT database — file/auth features disabled, email still works.');
 });
 
 /* ───────── SECURITY HEADERS ───────── */
@@ -164,10 +162,16 @@ app.post("/report", async (req, res) => {
       return res.status(400).json({ success: false, error: 'Message is required' });
     }
 
-    const timestamp = new Date();
-    
-    // Backup to MongoDB
-    await Report.create({ message, email, timestamp });
+    // Try to save to MongoDB — skip silently if DB is not connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await Report.create({ message, email, timestamp: new Date() });
+      } catch (dbErr) {
+        console.warn('⚠️  DB save skipped:', dbErr.message);
+      }
+    } else {
+      console.warn('⚠️  DB not connected — skipping report save, sending email only.');
+    }
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error('❌ Missing EMAIL_USER or EMAIL_PASS environment variables!');
@@ -176,10 +180,10 @@ app.post("/report", async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: 'pm9569mishraji@gmail.com',
+      to: process.env.EMAIL_USER,
       replyTo: email || process.env.EMAIL_USER,
       subject: 'New Complaint from Website',
-      text: `User Message:\n${message}\n\nFrom: ${email || 'Anonymous'}`,
+      text: `User Email: ${email || 'Anonymous'}\nMessage: ${message}`,
       html: `
         <h2>New Complaint from Website</h2>
         <p><strong>User Email:</strong> ${email || 'Not provided'}</p>
@@ -191,7 +195,7 @@ app.post("/report", async (req, res) => {
 
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.log(`✅ Support email sent successfully for request from ${email}. Message ID: ${info.messageId}`);
+      console.log(`✅ Support email sent from ${email}. Message ID: ${info.messageId}`);
       res.json({ success: true });
     } catch (mailErr) {
       console.error('❌ Failed to send support email:', mailErr);
@@ -200,7 +204,7 @@ app.post("/report", async (req, res) => {
 
   } catch (err) {
     console.error('Report error:', err);
-    res.status(500).json({ success: false, error: 'Server error parsing report request' });
+    res.status(500).json({ success: false, error: 'Server error processing report' });
   }
 });
 
