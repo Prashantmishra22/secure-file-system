@@ -166,9 +166,16 @@ zone.addEventListener('drop', e => {
   const fi = document.getElementById('fileInput');
   if (e.dataTransfer.files.length) { const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]); fi.files = dt.files; onFileChosen(fi); }
 });
-async function uploadFile() {
+async function uploadFile(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation(); // Prevent click from bubbling up to uploadZone listener
+  }
   const fi = document.getElementById('fileInput');
-  if (!fi.files.length) return;
+  if (!fi.files || !fi.files.length) {
+    return showToast("Please select file", "error");
+  }
+
   const prog = document.getElementById('uploadProgress');
   const btn = document.getElementById('uploadBtn');
   prog.classList.add('show'); btn.disabled = true; btn.textContent = 'Uploading...';
@@ -176,10 +183,23 @@ async function uploadFile() {
   try {
     const res = await fetch(BASE+'/upload', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
     const data = await res.json();
-    if (res.ok) { showToast('File encrypted & uploaded ✓','success'); fi.value=''; document.getElementById('fileChosen').textContent='No file chosen'; loadFiles(); }
-    else showToast(data.error || 'Upload failed', 'error');
-  } catch { showToast('Server error during upload', 'error'); }
-  finally { prog.classList.remove('show'); btn.disabled=false; btn.textContent='Upload'; }
+    if (res.ok && data.success) {
+      showToast('File encrypted & uploaded ✓', 'success');
+      fi.value=''; 
+      document.getElementById('fileChosen').textContent='No file chosen'; 
+      loadFiles(); 
+    }
+    else {
+      showToast(data.error || 'Upload failed', 'error');
+    }
+  } catch { 
+    showToast('Server error during upload', 'error'); 
+  }
+  finally { 
+    prog.classList.remove('show'); 
+    btn.disabled=false; 
+    btn.textContent='Upload'; 
+  }
 }
 
 // ── DOWNLOAD ──
@@ -545,3 +565,10 @@ function logout() { sessionStorage.clear(); window.location = 'index.html'; }
 
 // ── INIT ──
 loadFiles();
+
+// Open file picker when clicking the upload zone, but NOT when clicking the controls row (Upload button, file name)
+document.getElementById("uploadZone").addEventListener("click", (e) => {
+  // If the click came from inside the controls area (Upload button / file label), do nothing
+  if (e.target.closest(".upload-controls")) return;
+  document.getElementById("fileInput").click();
+});
